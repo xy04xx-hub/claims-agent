@@ -1,8 +1,9 @@
+import { randomUUID } from "node:crypto";
 import {
-  GetCommand, QueryCommand, type DynamoDBDocumentClient, type QueryCommandInput,
+  GetCommand, QueryCommand, TransactWriteCommand, type DynamoDBDocumentClient, type QueryCommandInput,
 } from "@aws-sdk/lib-dynamodb";
 import type { ClaimTypePack, Policy } from "@claims-agent/domain";
-import { claimKey, customerPk, evidenceByIdPk, evidenceIndexPk, packPk, policyPk } from "./keys.js";
+import { auditPk, claimKey, customerPk, evidenceByIdPk, evidenceIndexPk, packPk, policyPk, queuePk } from "./keys.js";
 import { toClaim, toEvidenceRecord, toPack, toPolicy } from "./normalize.js";
 import type { ClaimRecord, CommitInput, CommitResult, EvidenceRecord, IndexType, Store } from "./types.js";
 
@@ -101,7 +102,60 @@ export class DynamoStore implements Store {
     return items.filter((i) => i.claimId !== excludeClaimId).length;
   }
 
-  commitDecision(_input: CommitInput): Promise<CommitResult> {
-    throw new Error("commitDecision: not implemented");
+  /**
+   * One transaction: update the claim only while it is PROCESSING, and put the audit record.
+   * A claim that is already decided makes the condition fail: nothing is written and ALREADY_DECIDED is returned.
+   */
+  async commitDecision({ claim, decision, audit, decidedAt }: CommitInput): Promise<CommitResult> {
+    const t = claim.tenantId;
+    const routed = decision.outcome === "ROUTED_TO_ADJUSTER";
+    const clean = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
+    const sets = ["#status = :status", "#decision = :decision", "payout = :payout", "reasons = :reasons", "decidedAt = :decidedAt"];
+    const values: Record<string, unknown> = {
+      ":status": decision.outcome,
+      ":decision": clean(decision),
+      ":payout": decision.payout,
+      ":reasons": clean(decision.reasons),
+      ":decidedAt": decidedAt,
+      ":processing": "PROCESSING",
+    };
+    if (routed) {
+      // Sparse adjuster-queue index: only routed claims carry these attributes.
+      sets.push("gsi2pk = :q", "gsi2sk = :queued");
+      values[":q"] = queuePk(t, decision.outcome, claim.claimId);
+      values[":queued"] = claim.createdAt || decidedAt;
+    }
+    try {
+      await this.doc.send(
+        new TransactWriteCommand({
+          TransactItems: [
+            {
+              Update: {
+                TableName: this.tables.claims,
+                Key: claimKey(t, claim.claimId),
+                UpdateExpression: `SET ${sets.join(", ")}`,
+                ConditionExpression: "attribute_exists(pk) AND #status = :processing",
+                ExpressionAttributeNames: { "#status": "status", "#decision": "decision" },
+                ExpressionAttributeValues: values,
+              },
+            },
+            {
+              Put: {
+                TableName: this.tables.audit,
+                Item: clean({ pk: auditPk(t, claim.claimId), sk: `${audit.timestamp}#${randomUUID()}`, ...audit }),
+                ConditionExpression: "attribute_not_exists(pk) AND attribute_not_exists(sk)",
+              },
+            },
+          ],
+        }),
+      );
+      return "COMMITTED";
+    } catch (err) {
+      const e = err as { name?: string; CancellationReasons?: { Code?: string }[] };
+      if (e.name === "TransactionCanceledException" && e.CancellationReasons?.[0]?.Code === "ConditionalCheckFailed") {
+        return "ALREADY_DECIDED";
+      }
+      throw err;
+    }
   }
 }
