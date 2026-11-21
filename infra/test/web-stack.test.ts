@@ -5,11 +5,20 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as cdk from 'aws-cdk-lib';
 import { Annotations, Match, Template } from 'aws-cdk-lib/assertions';
-import { beforeAll, describe, expect, expectTypeOf, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, expectTypeOf, it } from 'vitest';
 import { buildCsp } from '../lib/constructs/platform/csp.js';
 import { CI_PLACEHOLDER_ACCOUNT } from '../lib/stage.js';
 import { loadStageConfig, resolveRemovalPolicy, type StageConfig } from '../lib/stage-config.js';
 import { WebStack, type WebResources } from '../lib/stacks/web-stack.js';
+
+const tmpDirs: string[] = [];
+const trackTmp = (dir: string): string => {
+  tmpDirs.push(dir);
+  return dir;
+};
+afterAll(() => {
+  for (const dir of tmpDirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+});
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const CONFIG_DIR = path.resolve(HERE, '../config');
@@ -305,7 +314,7 @@ describe('wiring', () => {
   it('consumer depends on Web and Web depends on nothing', () => {
     const config = loadStageConfig('dev-a', CONFIG_DIR, () => undefined);
     const env = { account: CI_PLACEHOLDER_ACCOUNT, region: 'us-east-1' };
-    const app = new cdk.App({ outdir: fs.mkdtempSync(path.join(fs.realpathSync('/tmp'), 'cdk-test-')) });
+    const app = new cdk.App({ outdir: trackTmp(fs.mkdtempSync(path.join(fs.realpathSync('/tmp'), 'cdk-test-'))) });
     const stack = new WebStack(app, 'Web', {
       stage: 'dev-a',
       config,

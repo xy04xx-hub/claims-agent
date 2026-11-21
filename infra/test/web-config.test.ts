@@ -1,8 +1,17 @@
-import { describe, expect, it } from 'vitest';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { afterAll, describe, expect, it } from 'vitest';
+import { mkdtempSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { ConfigError, loadStageConfig, scanForSecrets } from '../lib/stage-config.js';
+
+const tmpDirs: string[] = [];
+const trackTmp = (dir: string): string => {
+  tmpDirs.push(dir);
+  return dir;
+};
+afterAll(() => {
+  for (const dir of tmpDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+});
 // Validates: Requirements 6.2, 6.3, 6.4, 6.6
 const CONFIG_DIR = resolve(__dirname, '../config');
 const STAGES = ['default', 'demo', 'dev-a', 'dev-b'] as const;
@@ -11,7 +20,7 @@ const read = (stage: string): Record<string, unknown> =>
   JSON.parse(readFileSync(join(CONFIG_DIR, `${stage}.json`), 'utf8'));
 
 function loadError(stage: string, cfg: Record<string, unknown>): ConfigError {
-  const dir = mkdtempSync(join(tmpdir(), 'web-config-'));
+  const dir = trackTmp(mkdtempSync(join(tmpdir(), 'web-config-')));
   writeFileSync(join(dir, `${stage}.json`), JSON.stringify(cfg));
   try {
     loadStageConfig(stage, dir);

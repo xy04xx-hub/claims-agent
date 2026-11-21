@@ -4,18 +4,27 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as cdk from 'aws-cdk-lib';
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import { applyNag, isValidSuppressionReason } from '../lib/nag.js';
 import { CI_PLACEHOLDER_ACCOUNT } from '../lib/stage.js';
 import { loadStageConfig, resolveRemovalPolicy } from '../lib/stage-config.js';
 import { WebStack } from '../lib/stacks/web-stack.js';
+
+const tmpDirs: string[] = [];
+const trackTmp = (dir: string): string => {
+  tmpDirs.push(dir);
+  return dir;
+};
+afterAll(() => {
+  for (const dir of tmpDirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+});
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const CONFIG_DIR = path.resolve(HERE, '../config');
 const REPO_ROOT = path.resolve(HERE, '../..');
 
 function synthWeb(stage: string) {
-  const app = new cdk.App({ outdir: fs.mkdtempSync(path.join(fs.realpathSync('/tmp'), 'cdk-test-')) });
+  const app = new cdk.App({ outdir: trackTmp(fs.mkdtempSync(path.join(fs.realpathSync('/tmp'), 'cdk-test-'))) });
   const config = loadStageConfig(stage, CONFIG_DIR, () => undefined);
   new WebStack(app, 'Web', {
     stage,

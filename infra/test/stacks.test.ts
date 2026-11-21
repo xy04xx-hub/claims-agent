@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import { buildApp as buildStacks } from '../lib/build-app.js';
 import { applyNag } from '../lib/nag.js';
 import { AgentStack } from '../lib/stacks/agent-stack.js';
@@ -18,6 +18,15 @@ import { WebStack } from '../lib/stacks/web-stack.js';
 import { CI_PLACEHOLDER_ACCOUNT } from '../lib/stage.js';
 import { loadStageConfig, resolveRemovalPolicy } from '../lib/stage-config.js';
 import type { BaseStackProps } from '../lib/stack-props.js';
+
+const tmpDirs: string[] = [];
+const trackTmp = (dir: string): string => {
+  tmpDirs.push(dir);
+  return dir;
+};
+afterAll(() => {
+  for (const dir of tmpDirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+});
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const CONFIG_DIR = path.resolve(HERE, '../config');
@@ -49,7 +58,7 @@ const DENY_LIST = [
 ];
 
 function buildApp(stage: string, removalPolicy?: cdk.RemovalPolicy) {
-  const app = new cdk.App({ outdir: fs.mkdtempSync(path.join(fs.realpathSync('/tmp'), 'cdk-test-')) });
+  const app = new cdk.App({ outdir: trackTmp(fs.mkdtempSync(path.join(fs.realpathSync('/tmp'), 'cdk-test-'))) });
   const config = loadStageConfig(stage, CONFIG_DIR, () => undefined);
   const resolved = removalPolicy ?? cdk.RemovalPolicy[resolveRemovalPolicy(stage, config)];
   const props: BaseStackProps = {
@@ -132,7 +141,7 @@ describe('dev-a synth', () => {
 
 describe('nag failure reporting', () => {
   function badApp(opts: { publicBucket?: boolean; ackReason?: string }) {
-    const app = new cdk.App({ outdir: fs.mkdtempSync(path.join(fs.realpathSync('/tmp'), 'cdk-test-')) });
+    const app = new cdk.App({ outdir: trackTmp(fs.mkdtempSync(path.join(fs.realpathSync('/tmp'), 'cdk-test-'))) });
     const stack = new cdk.Stack(app, 'Bad', { env: { account: CI_PLACEHOLDER_ACCOUNT, region: 'us-east-1' } });
     if (opts.publicBucket) {
       new s3.Bucket(stack, 'PublicBucket', { publicReadAccess: true, blockPublicAccess: s3.BlockPublicAccess.BLOCK_ACLS_ONLY });
