@@ -22,7 +22,10 @@ export function buildApp(app: cdk.App, props: BaseStackProps): void {
   // ---- Ops: owner B (muzair110) ----
   new OpsStack(app, 'Ops', props);
   // ---- Processing: owner A ----
-  new ProcessingStack(app, 'Processing', props);
+  new ProcessingStack(app, 'Processing', {
+    ...props,
+    foundation: app.node.findChild('Foundation') as FoundationStack,
+  });
   // ---- Agent: owner A ----
   new AgentStack(app, 'Agent', props);
 

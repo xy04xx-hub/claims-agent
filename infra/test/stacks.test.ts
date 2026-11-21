@@ -83,8 +83,8 @@ describe('dev-a synth', () => {
     expect(assembly.stacks).toHaveLength(7);
     for (const st of assembly.stacks) {
       const types = Object.values((st.template.Resources ?? {}) as Record<string, { Type: string }>).map((r) => r.Type);
-      // The Foundation stack (T-05) legitimately holds the data resources; the other six hold only metadata.
-      if (!st.stackName.endsWith('-Foundation')) {
+      // Foundation (T-05) holds the data resources and Processing (T-14) the Decision Lambda; the other five hold only metadata.
+      if (!st.stackName.endsWith('-Foundation') && !st.stackName.endsWith('-Processing')) {
         const bad = types.filter((t) => DENY_LIST.includes(t));
         expect(bad, `${st.stackName} has deny-listed resources`).toEqual([]);
         const extra = types.filter((t) => t !== 'AWS::CDK::Metadata');
@@ -96,7 +96,7 @@ describe('dev-a synth', () => {
     }
   });
 
-  it('records only the Foundation EvidenceBucket AwsSolutions-S1 acknowledgment', () => {
+  it('records only the known acknowledgments: Foundation S1 and the Processing decision function IAM5 (X-Ray) and L1 (Node 22)', () => {
     const { app } = buildApp('dev-a');
     const found: Array<{ path: string; ids: string[] }> = [];
     for (const c of app.node.findAll()) {
@@ -105,7 +105,11 @@ describe('dev-a synth', () => {
         found.push({ path: c.node.path, ids: Object.keys((m.data ?? {}) as Record<string, unknown>) });
       }
     }
-    expect(found).toEqual([{ path: 'Foundation/EvidenceBucket', ids: ['Annotation::AwsSolutions-S1'] }]);
+    expect(found).toEqual([
+      { path: 'Foundation/EvidenceBucket', ids: ['Annotation::AwsSolutions-S1'] },
+      { path: 'Processing/decision', ids: ['Annotation::AwsSolutions-IAM5'] },
+      { path: 'Processing/decision', ids: ['Annotation::AwsSolutions-L1'] },
+    ]);
   });
 });
 

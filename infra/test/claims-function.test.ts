@@ -75,7 +75,7 @@ describe('ClaimsFunction', () => {
     expect(() => build({ timeout: Duration.seconds(900), memorySize: 10240 })).not.toThrow();
   });
 
-  it('is not instantiated by any stack: only the CDK auto-delete provider Lambda exists in dev-a Foundation', () => {
+  it('is instantiated only by Processing (the decision function): Foundation has the CDK auto-delete provider Lambda, the other stacks none', () => {
     const app = new App();
     const config = loadStageConfig('dev-a', path.resolve(here, '../config'), () => undefined);
     const props = {
@@ -84,13 +84,14 @@ describe('ClaimsFunction', () => {
       removalPolicy: RemovalPolicy.DESTROY,
       env: { account: CI_PLACEHOLDER_ACCOUNT, region: 'us-east-1' },
     };
+    const foundation = new FoundationStack(app, 'Foundation', props);
     const stacks = [
-      new FoundationStack(app, 'Foundation', props),
+      foundation,
       new AuthStack(app, 'Auth', props),
       new ApiStack(app, 'Api', props),
       new WebStack(app, 'Web', props),
       new OpsStack(app, 'Ops', props),
-      new ProcessingStack(app, 'Processing', props),
+      new ProcessingStack(app, 'Processing', { ...props, foundation }),
       new AgentStack(app, 'Agent', props),
     ];
     for (const s of stacks) {
@@ -101,6 +102,9 @@ describe('ClaimsFunction', () => {
         t.resourceCountIs('Custom::S3AutoDeleteObjects', 1);
         const [logicalId] = Object.keys(t.findResources('AWS::Lambda::Function'));
         expect(logicalId).toMatch(/^CustomS3AutoDeleteObjectsCustomResourceProvider/);
+      } else if (s instanceof ProcessingStack) {
+        // T-14: the Decision Lambda, built with ClaimsFunction.
+        t.resourceCountIs('AWS::Lambda::Function', 1);
       } else {
         t.resourceCountIs('AWS::Lambda::Function', 0);
       }
