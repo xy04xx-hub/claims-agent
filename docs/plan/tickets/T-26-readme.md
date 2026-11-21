@@ -8,7 +8,7 @@
 | Judging items | OE5 |
 | Estimate | 2 h |
 | Status | Todo |
-| Branch | `<A|B>/T-26-readme` |
+| Branch | `b/T-26-readme` |
 
 ## Why
 

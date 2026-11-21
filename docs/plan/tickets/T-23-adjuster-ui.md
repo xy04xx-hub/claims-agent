@@ -8,7 +8,7 @@
 | Judging items | BIZ-C, SEC2 |
 | Estimate | 4 h |
 | Status | Todo |
-| Branch | `<A|B>/T-23-adjuster-ui` |
+| Branch | `b/T-23-adjuster-ui` |
 
 ## Why
 

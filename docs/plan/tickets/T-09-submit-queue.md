@@ -8,7 +8,7 @@
 | Judging items | SEC2, SEC5, OE3, COST3 |
 | Estimate | 4 h |
 | Status | Todo |
-| Branch | `<A|B>/T-09-submit-queue` |
+| Branch | `b/T-09-submit-queue` |
 
 ## Why
 

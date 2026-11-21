@@ -8,7 +8,7 @@
 | Judging items | BIZ-C, BIZ-P, OE4, SEC5 |
 | Estimate | 5 h |
 | Status | Todo |
-| Branch | `<A|B>/T-22-customer-ui` |
+| Branch | `b/T-22-customer-ui` |
 
 ## Why
 

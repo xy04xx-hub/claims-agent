@@ -8,7 +8,7 @@
 | Judging items | OE2, OE3, OE4 |
 | Estimate | 3 h |
 | Status | Todo |
-| Branch | `<A|B>/T-25-observability` |
+| Branch | `b/T-25-observability` |
 
 ## Why
 

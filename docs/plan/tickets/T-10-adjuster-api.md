@@ -8,7 +8,7 @@
 | Judging items | SEC2, BIZ-C |
 | Estimate | 3 h |
 | Status | Todo |
-| Branch | `<A|B>/T-10-adjuster-api` |
+| Branch | `b/T-10-adjuster-api` |
 
 ## Why
 

@@ -8,7 +8,7 @@
 | Judging items | COST5, BIZ-V, OE2 |
 | Estimate | 2 h |
 | Status | Todo |
-| Branch | `<A|B>/T-24-impact` |
+| Branch | `b/T-24-impact` |
 
 ## Why
 

@@ -8,7 +8,7 @@
 | Judging items | SEC4, OE1 |
 | Estimate | 2 h |
 | Status | Todo |
-| Branch | `<A|B>/T-07-web` |
+| Branch | `b/T-07-web` |
 
 ## Why
 

@@ -8,7 +8,7 @@
 | Judging items | SEC1, SEC2 |
 | Estimate | 3 h |
 | Status | Todo |
-| Branch | `<A|B>/T-06-auth` |
+| Branch | `b/T-06-auth` |
 
 ## Why
 

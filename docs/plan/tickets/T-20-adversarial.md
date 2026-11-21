@@ -8,7 +8,7 @@
 | Judging items | SEC5, OE4 |
 | Estimate | 3 h |
 | Status | Todo |
-| Branch | `<A|B>/T-20-adversarial` |
+| Branch | `a/T-20-adversarial` |
 
 ## Why
 

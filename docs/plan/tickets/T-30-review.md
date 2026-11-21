@@ -8,7 +8,7 @@
 | Judging items | SEC1-5, OE1-5, COST1-5 |
 | Estimate | 3 h |
 | Status | Todo |
-| Branch | `<A|B>/T-30-review` |
+| Branch | `a/T-30-review` or `b/T-30-review` (whoever leads) |
 
 ## Why
 

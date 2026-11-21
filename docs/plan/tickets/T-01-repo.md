@@ -8,7 +8,7 @@
 | Judging items | OE1, OE5 |
 | Estimate | 1 h |
 | Status | Todo |
-| Branch | `<A|B>/T-01-repo` |
+| Branch | `a/T-01-repo` |
 
 ## Why
 
@@ -17,11 +17,11 @@ Both people need to push, review and merge safely. Push to the remote failed ear
 ## Tasks
 
 - [ ] Make sure both GitHub accounts have write access to the repository (the owner adds the other as collaborator).
-- [ ] Create `main` from the current `kiro` branch and set it as the default branch.
+- [ ] Create `main` from the current `kiro` branch and set it as the default branch (needs the repo owner `xy04xx-hub`; `main` itself is created by B's repo-structure PR).
 - [ ] Protect `main`: require a pull request, one approving review, passing CI (added in T-04), and no force push.
 - [ ] Add `.github/pull_request_template.md` with: ticket ID, what changed, verification evidence, judging items touched, checklist (tests, cdk-nag, docs, no secrets).
-- [ ] Add `CODEOWNERS`: A for `backend/domain`, `backend/processing`, `backend/tools`, `agent/`, `infra/lib/stacks/processing-stack.ts`, `infra/lib/stacks/agent-stack.ts`. B for the rest. `contracts/` owned by both.
-- [ ] Add `.gitignore` entries for `node_modules`, `cdk.out`, `.env*`, build output (keep the existing ones).
+- [ ] Add `CODEOWNERS` that matches the ownership in `.kiro/steering/repository.md` section 2 (A's and B's GitHub usernames; shared paths list both).
+- [x] `.gitignore`, `.gitattributes`, `.editorconfig`, `.nvmrc` and the steering file `repository.md` (done in B's repo-structure PR).
 
 ## Acceptance criteria
 

@@ -8,7 +8,7 @@
 | Judging items | BIZ-C, BIZ-P |
 | Estimate | 3 h |
 | Status | Todo |
-| Branch | `<A|B>/T-12-seed` |
+| Branch | `a/T-12-seed` |
 
 ## Why
 
