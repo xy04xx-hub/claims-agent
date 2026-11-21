@@ -26,7 +26,7 @@ Browser (React console)
    The Interceptor Lambda verifies the ticket, checks the claim is still PROCESSING, and writes claimId and tenantId
    into the tool request. Tools never take a claim or customer ID from the model.
    Tools: lookup_policy, check_fraud_signals, verify_evidence (Lambdas, DynamoDB read-only)
-6  Agent calls Bedrock (Claude Haiku 5.5, Converse) with Guardrails applied to untrusted text, returns a structured proposal
+6  Agent calls Bedrock (Claude Haiku 4.5, Converse) with Guardrails applied to untrusted text, returns a structured proposal
 7  Worker calls the Decision Lambda (approve_within_limit or route_to_adjuster). It re-fetches everything and writes the outcome + audit record.
    Failure path: after 3 failed receives the job goes to the DLQ, and the DLQ triggers the Decision Lambda in route-only mode.
 8  Browser polls GET /claims/{claimId} until the status is final.
@@ -49,7 +49,7 @@ Ops: CloudWatch (logs, metrics, dashboard), AgentCore Observability (traces), Cl
 | AgentCore Gateway + Interceptor | Exposes the read-only tool Lambdas as MCP tools. **Inbound: IAM (`AWS_IAM`), only the Runtime's role may invoke.** Outbound to Lambda targets: the gateway service role, limited to invoking the three tool functions. The REQUEST Interceptor (headers passed through) verifies the job ticket with the cached public key, rejects missing, expired, malformed or replayed tickets, checks the claim is `PROCESSING`, and injects `claimId` and `tenantId` into the tool arguments, overwriting anything the model sent. |
 | Read-only tool Lambdas | `lookup_policy` (plan, pack, version by loss date), `check_fraud_signals` (hash, identifier reuse, frequency, early claim, outlier), `verify_evidence` (compares extracted fields to the policy). |
 | Decision Lambda | Contains `approve_within_limit` and `route_to_adjuster`. **The only role allowed to write a decision status.** Re-fetches policy, pack, signals and identifiers itself. Reads the kill switch. Also triggered by the DLQ. |
-| Bedrock | Claude Haiku 5.5 (see Model choice). Guardrails (prompt-attack filter) on untrusted text. |
+| Bedrock | Claude Haiku 4.5 (see Model choice). Guardrails (prompt-attack filter) on untrusted text. |
 | DynamoDB | On-demand, encrypted with KMS, PITR. All keys carry `tenantId`. |
 | CloudWatch, AgentCore Observability, CloudTrail | Structured logs, metrics, dashboard, alarms, model and tool traces, API audit. |
 | KMS | Two customer-managed keys: a symmetric data key for S3 evidence, DynamoDB and SQS, and an asymmetric ECC_NIST_P256 key that signs job tickets (`kms:Sign` for the Worker only, the Interceptor verifies locally with the public key). |
@@ -93,7 +93,7 @@ Rules for every hop:
 | Runtime → AgentCore Gateway (MCP) | IAM SigV4 with the Runtime execution role, plus the job ticket header | `bedrock-agentcore:InvokeGateway` on this gateway. Ticket binds the call to one claim and tenant |
 | Gateway → tool Lambdas | Gateway service role (the only option for Lambda targets) | `lambda:InvokeFunction` on the three tool functions |
 | Interceptor, tools → DynamoDB | Each function's own role | Read-only, specific tables |
-| Runtime → Bedrock | Execution role | Haiku 5.5 inference profile and the one guardrail |
+| Runtime → Bedrock | Execution role | Haiku 4.5 inference profile and the one guardrail |
 | Worker → Decision Lambda | IAM role | Invoke the Decision Lambda only |
 
 **Job ticket:** a compact JWS with `claimId`, `tenantId`, `attempt`, `iat` and `exp` (60 s), plus a unique `jti`. The Worker signs a new ticket for each attempt. The Interceptor rejects a ticket whose signature, expiry or claim status (not `PROCESSING`) fails, and records the `jti` in the audit log. Even a fully prompt-injected agent can then read only the claim it is already working on, and it can never write a decision.
@@ -104,17 +104,22 @@ Rules for every hop:
 
 ## Model choice (decided with the judging criteria in mind)
 
-**Claude Haiku 5.5** (`global.anthropic.claude-haiku-5-5`, or `us.anthropic.claude-haiku-5-5` if US-only routing is needed) through the Converse API in us-east-1. Prices from the AWS Price List API for us-east-1, fetched 2026-11-21, per 1M tokens, standard context (prompts up to 100,000 tokens):
+**Claude Haiku 4.5** (`global.anthropic.claude-haiku-4-5-20251001-v1:0`, or `us.anthropic.claude-haiku-4-5-20251001-v1:0` if US-only routing is needed) through the Converse API in us-east-1. Both profile IDs returned a successful Converse call in the workshop account on 2026-11-21. The short ID `us.anthropic.claude-haiku-4-5` is rejected as invalid.
+
+Claude Haiku 5.5 was the first choice but is blocked by the workshop model allowlist (`ws-bedrock-model-allowlist-policy-1` denies `anthropic.claude-haiku-5-5`), so Haiku 4.5 replaces it. Nova 2 Lite is a cheaper production option to evaluate later: it is allowed and costs less than half as much per claim on the same token assumptions, but its image reading and caching are less proven for this workload.
+
+Prices per 1M tokens, standard context. Haiku 4.5 input and output are the prices given for this project. Cache rates are Anthropic list multipliers (read 0.1x, write 1.25x for 5 min, 2x for 1 h), not re-fetched. Nova 2 Lite and Sonnet 5.5 rates are from the AWS Price List API for us-east-1, fetched 2026-11-21.
 
 | Model | Input | Output | Cache read | Notes |
 |---|---|---|---|---|
-| **Claude Haiku 5.5, global profile** | $0.10 | $0.50 | $0.01 | Image and text input. Explicit caching on `system`, `messages` and `tools`, minimum 512 tokens, 5 min or 1 h TTL. Cache write $0.125 (5 min) or $0.20 (1 h). |
-| Claude Haiku 5.5, US geo profile | $0.11 | $0.55 | $0.011 | 10% more. Use when data must stay in US Regions. |
-| Nova 2 Lite | $0.33 | $2.75 | $0.0825 | Caching 5 min only, documented as mainly for text prompts. |
-| Claude Haiku 4.5 | $1.00 | $5.00 | $0.10 | Cache minimum 4,096 tokens. |
-| Claude Sonnet 5.5 | $2.00 | $10.00 | $0.10 | Candidate for an escalation tier later. |
+| **Claude Haiku 4.5, global profile** | $1.00 | $5.00 | $0.10 | Image and text input, tool use. Cache minimum **4,096 tokens**. Cache write $1.25 (5 min) or $2.00 (1 h). |
+| Claude Haiku 4.5, US geo profile | not re-fetched | not re-fetched | not re-fetched | Check the price before use. Use when data must stay in US Regions. |
+| Nova 2 Lite | $0.33 | $2.75 | $0.0825 | Caching 5 min only, documented as mainly for text prompts. Cheaper production option. |
+| Claude Sonnet 5.5 | $2.00 | $10.00 | $0.10 | Candidate for an escalation tier later. Not checked against the allowlist. |
 
-Haiku 5.5 has the lowest token price of the vision-capable candidates, supports tool use and image input, and its 512-token cache minimum lets us cache the system prompt and tool definitions. Controls: `maxTokens` set per call, evidence normalized to at most 3.5 MB per image, 1-hour cache TTL on the static prefix, a cache checkpoint after the evidence so the second model turn reads it from cache. Estimated model cost is about $0.0013 per claim with caching and $0.0020 without. Details in `docs/cost-estimate.md`. Confirm availability and quotas in the account before the first build.
+**Cache minimum.** Haiku 4.5 will not cache a prefix under 4,096 tokens. The static prefix (system prompt and tool definitions, about 2,000 tokens) is below that, so it is not cached on its own. The checkpoint after the evidence covers system, tools, claim text and evidence together (about 6,400 tokens), which is above the minimum. Turn 1 writes that prefix and turn 2 reads it. A 1-hour checkpoint on the static prefix alone has no effect until the prefix reaches 4,096 tokens.
+
+Controls: `maxTokens` set per call, evidence normalized to at most 3.5 MB per image, a cache checkpoint after the evidence so the second model turn reads it from cache. Estimated model cost is about $0.0154 per claim with caching and $0.0196 without. Details in `docs/cost-estimate.md`. Confirm availability and quotas in the account before the first build.
 
 ## Performance target
 
@@ -247,13 +252,13 @@ Record the answer in this section once agreed.
 4. Near-duplicate hash method and distance threshold.
 5. Retention period for evidence and audit records.
 6. Seed data set for the demo (tenant, customers, policies with IMEI and VIN, `CLM-1042`, synthetic police report, damaged-phone photo with IMEI).
-7. Global or US geo inference profile for Haiku 5.5 (10% price difference, data routing).
-8. Check in the account: Bedrock quotas for Haiku 5.5, AgentCore Runtime, Gateway with `AWS_IAM` inbound auth and a REQUEST interceptor with header pass-through in us-east-1, Lambda concurrency quota.
+7. Global or US geo inference profile for Haiku 4.5 (price difference, data routing).
+8. Check in the account: Bedrock quotas for Haiku 4.5, AgentCore Runtime, Gateway with `AWS_IAM` inbound auth and a REQUEST interceptor with header pass-through in us-east-1, Lambda concurrency quota.
 
 Settled:
 
 - **Region us-east-1.**
-- **Model: Claude Haiku 5.5** with prompt caching, `maxTokens` limits and normalized images.
+- **Model: Claude Haiku 4.5** with prompt caching, `maxTokens` limits and normalized images.
 - **No Knowledge Base on the decision path.** Coverage decisions use structured DynamoDB fields enforced in code.
 - **Investigator agent on AgentCore Runtime with read-only tools through AgentCore Gateway and an Interceptor. The Decision Lambda is code outside the agent.**
 - **Credentials:** Cognito access tokens at API Gateway only. IAM SigV4 for the Runtime to call the MCP gateway. A KMS-signed job ticket scopes every tool call to one claim. No token passthrough anywhere.

@@ -112,7 +112,7 @@ These are the design decisions that deepen the baseline in `architecture.md`, in
 
 ### 5.1 Investigator agent proposes, code decides (decided: option C)
 
-1. The **Worker Lambda** takes a claim from SQS, loads the claim and the normalized evidence from S3, and invokes the **Investigator agent on AgentCore Runtime** (Bedrock Converse tool use, Claude Haiku 5.5).
+1. The **Worker Lambda** takes a claim from SQS, loads the claim and the normalized evidence from S3, and invokes the **Investigator agent on AgentCore Runtime** (Bedrock Converse tool use, Claude Haiku 4.5).
 2. The agent calls **read-only tools through AgentCore Gateway** in parallel: `lookup_policy`, `check_fraud_signals`, `verify_evidence`. The Runtime authenticates to the gateway with its own IAM role (no user token is ever forwarded). The Worker gives the agent a **KMS-signed job ticket** for this one claim, and the runtime code attaches it to every MCP call. The **Interceptor Lambda** verifies the ticket and writes the claim and tenant into each tool call, so a prompt-injected agent cannot read anyone else's data. See "Credentials and tokens" in `architecture.md`.
 3. The agent returns a schema-validated **proposal**: extracted fields (item, cause from the fixed list, amount, loss date, identifiers), an evidence assessment with confidence, and a draft explanation.
 4. The Worker then calls the **Decision Lambda** (`approve_within_limit` or `route_to_adjuster`). It is not exposed to the model. It re-fetches the policy, pack, signals and identifiers and does not trust the proposal's statements about data.
@@ -244,7 +244,7 @@ Matches the script in `product.md`:
 | 6 | Thresholds | SSM for the kill switch and global defaults. Caps per category and cause in claim type packs. Values copied into the audit record. |
 | 7 | Pilot controls | Shadow mode, QA sampling, override analytics are pilot items. The kill switch is in the MVP. |
 | 8 | Observability | AgentCore Observability and CloudWatch baseline plus the console impact panel. CloudWatch Omni is a stretch goal. |
-| 9 | Region and model | us-east-1. Claude Haiku 5.5 with prompt caching and `maxTokens` limits. |
+| 9 | Region and model | us-east-1. Claude Haiku 4.5 with prompt caching and `maxTokens` limits. |
 | 10 | Compute | Lambda. Fargate is a later option behind the same queue. EC2 not recommended. |
 | 11 | Latency target | p50 about 4 s, p95 up to 6 s. |
 | 12 | Evidence upload | Presigned POST direct to S3. Metadata only through the API. |
@@ -253,8 +253,8 @@ Matches the script in `product.md`:
 
 ## 9. Still open
 
-1. Account checks: Bedrock quotas for Haiku 5.5, AgentCore Runtime, Gateway and interceptor availability in us-east-1, Lambda concurrency quota.
-2. Global or US geo inference profile for Haiku 5.5 (10% price difference, data routing).
+1. Account checks: Bedrock quotas for Haiku 4.5, AgentCore Runtime, Gateway and interceptor availability in us-east-1, Lambda concurrency quota.
+2. Global or US geo inference profile for Haiku 4.5 (price difference, data routing).
 3. Whether the happy path stays within p50 about 4 s and p95 up to 6 s after the first build. Per-stage metrics will show where the time goes.
 4. Real inputs for the value model from a design partner. Until then the numbers are labelled assumptions with the published results in `docs/value-model.md` as context.
 5. Primary sources for the secondary-source figures (Aviva savings, Lemonade ratios) before the pitch.
