@@ -7,6 +7,8 @@ import { dhash64Hex, sha256Hex } from "../seed/lib/hashing.js";
 import { decodePng } from "../seed/lib/png.js";
 
 type Item = Record<string, unknown>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Any = any;
 const evidenceDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../seed/evidence");
 export function realPhoto(): PhotoInfo {
   const bytes = readFileSync(path.join(evidenceDir, "phone-damaged-imei2.png"));
@@ -30,7 +32,7 @@ export class FakeDynamo {
   }
   all(table: string): Item[] { return this.tables.get(table) ?? []; }
 
-  async send(cmd: { constructor: { name: string }; input: Record<string, any> }): Promise<any> {
+  async send(cmd: { constructor: { name: string }; input: Record<string, Any> }): Promise<unknown> {
     const input = cmd.input;
     switch (cmd.constructor.name) {
       case "GetCommand": {
@@ -53,7 +55,7 @@ export class FakeDynamo {
         this.load(input.TableName, [input.Item]);
         return {};
       case "TransactWriteCommand": {
-        for (const t of input.TransactItems as Record<string, any>[]) {
+        for (const t of input.TransactItems as Record<string, Any>[]) {
           if (t.Update) {
             const u = t.Update;
             const row = this.all(u.TableName).find((r) => r.pk === u.Key.pk && r.sk === u.Key.sk);

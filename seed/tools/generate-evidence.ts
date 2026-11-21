@@ -59,7 +59,6 @@ class Canvas {
 
 const WHITE: Rgb = [255, 255, 255];
 const BLACK: Rgb = [20, 20, 20];
-const GREY: Rgb = [200, 200, 205];
 const RED: Rgb = [190, 30, 30];
 
 function banner(c: Canvas): void { c.text(40, HEIGHT - 50, BANNER, 3, RED); }
