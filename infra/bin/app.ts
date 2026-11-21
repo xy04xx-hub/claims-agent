@@ -1,15 +1,8 @@
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as cdk from 'aws-cdk-lib';
-import { applyNag } from '../lib/nag.js';
+import { buildApp } from '../lib/build-app.js';
 import type { BaseStackProps } from '../lib/stack-props.js';
-import { AgentStack } from '../lib/stacks/agent-stack.js';
-import { ApiStack } from '../lib/stacks/api-stack.js';
-import { AuthStack } from '../lib/stacks/auth-stack.js';
-import { FoundationStack } from '../lib/stacks/foundation-stack.js';
-import { OpsStack } from '../lib/stacks/ops-stack.js';
-import { ProcessingStack } from '../lib/stacks/processing-stack.js';
-import { WebStack } from '../lib/stacks/web-stack.js';
 import { parseStage, resolveAccount } from '../lib/stage.js';
 import { loadStageConfig, resolveRemovalPolicy } from '../lib/stage-config.js';
 
@@ -32,31 +25,7 @@ try {
     env: { account, region: REGION },
   };
 
-  // ---- Foundation: owner B (muzair110) ----
-  new FoundationStack(app, 'Foundation', props);
-
-  // ---- Auth: owner B (muzair110) ----
-  new AuthStack(app, 'Auth', props);
-
-  // ---- Api: owner B (muzair110) ----
-  new ApiStack(app, 'Api', props);
-
-  // ---- Web: owner B (muzair110) ----
-  new WebStack(app, 'Web', props);
-
-  // ---- Ops: owner B (muzair110) ----
-  new OpsStack(app, 'Ops', props);
-
-  // ---- Processing: owner A ----
-  new ProcessingStack(app, 'Processing', props);
-
-  // ---- Agent: owner A ----
-  new AgentStack(app, 'Agent', props);
-
-  cdk.Tags.of(app).add('project', 'claims-agent');
-  cdk.Tags.of(app).add('stage', stage);
-  applyNag(app);
-
+  buildApp(app, props);
   app.synth();
 } catch (e) {
   console.error(`ERROR: ${e instanceof Error ? e.message : String(e)}`);
