@@ -121,6 +121,19 @@ describe('foundation config properties', () => {
     );
   });
 
+  // Feature: b-t05-foundation-stack, Property 3: Config round trip including the new keys
+  // **Validates: Requirements 7.6**
+  it('Property 3: JSON round trip preserves the config and the parsed value validates', () => {
+    fc.assert(
+      fc.property(validConfigArb, fileArb, (cfg, file) => {
+        const parsed = JSON.parse(JSON.stringify(cfg)) as Cfg;
+        expect(parsed).toEqual(cfg);
+        expect(validateStageConfig(parsed, file)).toEqual(cfg);
+      }),
+      { numRuns: 200 },
+    );
+  });
+
   // Feature: b-t05-foundation-stack, Property 2: Console origin validation accepts exactly the allowed forms
   // **Validates: Requirements 7.4**
   it('Property 2: valid origins pass and every single-defect origin fails with its path named', () => {
