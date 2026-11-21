@@ -7,6 +7,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-cloudformation": "^3.1175.0",
     "aws-cdk-lib": "^2.278.0",
     "cdk-nag": "^3.1.0",
     "constructs": "^10.8.1"
