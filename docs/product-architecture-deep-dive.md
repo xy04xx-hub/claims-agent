@@ -46,38 +46,22 @@ All figures are from public sources. Secondary sources are marked.
 - Claims automation vendors exist already. Our differentiators to test: the decision boundary is enforced in code and testable, every decision is versioned and explainable, and deployment is in the customer's account (no claims data leaves it).
 - We did not research named competitors for this document. Do that before the pitch if judges will ask.
 
-## 3. Value model with worked numbers
+## 3. Value model
 
-**Every input below is an assumption to replace with the design partner's data.** Sources for the context are in section 2. The point is that the numbers trace to inputs, as the judging criteria require.
+Full numbers, published results from Allianz, Lemonade and Aviva, and the cross-check against industry cost ratios are in `docs/value-model.md`. Platform costs are in `docs/cost-estimate.md`.
 
-Reference customer: a mid-size device, renters or travel insurer, 100,000 claims a year.
+| | Conservative | Base |
+|---|---|---|
+| Adjuster time saved per 100,000 claims a year | $175,000 (5,000 h, about 2.4 FTE) | $666,667 (16,667 h, about 8 FTE) |
+| Fraud paid out and avoided | $125,000 | $420,000 |
+| **Total benefit** | **$300,000** | **$1,086,667** |
+| Platform cost at pilot volume | about $600 a year | about $600 a year |
 
-| Input | Conservative | Base | Source |
-|---|---|---|---|
-| Claims per year | 100,000 | 100,000 | assumption |
-| Share auto-handled | 20% | 40% | assumption. Lemonade reports about 55% after years of tuning, so 20 to 40% is realistic for an MVP threshold |
-| Adjuster minutes per claim saved | 15 | 25 | assumption, validate with time study |
-| Loaded adjuster cost per hour | $35 | $40 | assumption |
-| Share of claims flagged by fraud signals | 2% | 3% | assumption. The NICB 10% figure is all fraud elements, we catch only rule-detectable ones |
-| Share of flagged claims confirmed fraudulent | 25% | 40% | assumption |
-| Average fraudulent claim | $250 | $350 | assumption |
-
-| Result per year | Conservative | Base | Formula |
-|---|---|---|---|
-| Adjuster time saved | **$175,000** | **$666,667** | claims x auto share x (minutes / 60) x hourly cost |
-| Hours saved | 5,000 h | 16,667 h | claims x auto share x minutes / 60 |
-| Fraud paid out and avoided | **$125,000** | **$420,000** | claims x flagged share x confirmed share x average fraud amount |
-| **Total benefit** | **$300,000** | **$1,086,667** | sum |
-| Platform variable cost | about $5,000 | about $5,000 | assumed at most $0.05 per claim for Bedrock, Lambda, DynamoDB. Replace with the figure from `docs/cost-estimate.md` after checking current Bedrock pricing |
-
-- Cost per manually handled small claim in the base case is 25 min x $40/h = **$16.67**. The agent handles an eligible claim for cents.
-- Cycle time: auto-handled claims go from the carrier's current settlement time (measure it in discovery) to seconds. The demo shows the seconds side live.
-- Honest caveat on fraud: "caught" means routed to a person and not auto-paid. Humans may have caught some of these eventually. The gain is earlier detection and no automatic payment, so the fraud line is the softer number.
-- Commercial hypothesis: a per-auto-handled-claim fee at 10 to 15% of the $16.67 saving is about $2 per claim. Test this in discovery.
+Inputs are assumptions until a design partner supplies data. The base case sits inside the top-down range implied by published expense ratios (a 2-point drop in claims adjustment expense is about $1.1M for this carrier).
 
 ## 4. User journeys
 
-### 4.1 Customer: covered, small, clean claim (target under 5 seconds from submit)
+### 4.1 Customer: covered, small, clean claim (target p50 about 4 s, p95 up to 6 s from submit)
 
 1. Signs in (Cognito) and opens a new claim.
 2. Describes what happened. The console asks for the evidence the claim type requires (for example a photo showing the IMEI) and uploads it directly to S3 with a presigned URL.
@@ -128,22 +112,26 @@ These are the design decisions that deepen the baseline in `architecture.md`, in
 
 ### 5.1 Investigator agent proposes, code decides (decided: option C)
 
-1. The Orchestrator Lambda starts an **Investigator agent on AgentCore Runtime** (Bedrock Converse tool use). The agent calls **read-only tools through AgentCore Gateway** in parallel: `lookup_policy`, `check_fraud_signals`, `verify_evidence`.
-2. The agent returns a schema-validated **proposal**: extracted fields (item, cause from the fixed list, amount, loss date, identifiers), an evidence assessment with confidence, and a draft explanation.
-3. The Orchestrator then calls `approve_within_limit` or `route_to_adjuster` itself. These functions are **not exposed to the model**. They re-fetch the policy, pack, signals and identifiers and do not trust the proposal's statements about data.
+1. The **Worker Lambda** takes a claim from SQS, loads the claim and the normalized evidence from S3, and invokes the **Investigator agent on AgentCore Runtime** (Bedrock Converse tool use, Claude Haiku 5.5).
+2. The agent calls **read-only tools through AgentCore Gateway** in parallel: `lookup_policy`, `check_fraud_signals`, `verify_evidence`. An **Interceptor Lambda** on the Gateway rejects any call whose claim or tenant does not match the job. Tools take a `claimId`, never a customer ID, so a prompt-injected agent cannot read someone else's data.
+3. The agent returns a schema-validated **proposal**: extracted fields (item, cause from the fixed list, amount, loss date, identifiers), an evidence assessment with confidence, and a draft explanation.
+4. The Worker then calls the **Decision Lambda** (`approve_within_limit` or `route_to_adjuster`). It is not exposed to the model. It re-fetches the policy, pack, signals and identifiers and does not trust the proposal's statements about data.
 
-Why this shape: the agent does the work where reasoning helps (reading messy evidence, reconciling fields). Code does the work where guarantees matter. Gateway tools can later serve an adjuster copilot and other agents, and AgentCore Observability traces every model and tool call. Expected happy-path latency is about 3 to 6 s with parallel tool calls. Check it before every rehearsal. If it is too slow, fall back to a fixed pipeline: the model extracts once and code calls the same Lambdas directly.
+The agent has no S3 access: the Worker passes the evidence in. That keeps one more path closed for cross-claim data access.
 
-### 5.2 Asynchronous submit with status polling (decided)
+Why this shape: the agent does the work where reasoning helps (reading messy evidence, reconciling fields). Code does the work where guarantees matter. Gateway tools can later serve an adjuster copilot and other agents, and AgentCore Observability traces every model and tool call. Target happy-path latency is p50 about 4 s and p95 up to 6 s (see `architecture.md`). If it runs over, fall back to a fixed pipeline: the model extracts once and code calls the same Lambdas directly.
 
-- `POST /claims` validates input, writes the claim as `PROCESSING`, and returns `202` with the claim ID in under a second. The Lambda continues, or hands off through an async invoke or SQS.
-- The console polls `GET /claims/{id}` until the status is final. On the fast path this finishes in seconds, so the demo looks the same.
-- This removes the 30 s API timeout risk, gives a natural place for retries, and lets Bedrock throttling queue instead of fail. Streaming is not needed for the MVP.
-- Idempotency: the client sends a `clientRequestId`. A conditional DynamoDB write prevents a retry from creating or approving a claim twice.
+### 5.2 Asynchronous submit with SQS and a DLQ (decided)
+
+- `POST /claims` validates input, writes the claim as `PROCESSING`, sends a job to **SQS** and returns `202` with the claim ID. The console polls `GET /claims/{id}` (every 500 ms for the first 10 s, then every 2 s).
+- **Why SQS and not a direct async Lambda invoke:** the queue absorbs bursts, a concurrency cap on the event source mapping protects Bedrock and AgentCore quotas, visibility timeouts give controlled retries, and a DLQ makes failures visible and recoverable.
+- Settings: standard queue, SSE-KMS, message holds IDs only, batch size 1, partial batch responses, visibility timeout at least 6 times the Worker timeout (60 s), `maxReceiveCount` 3, DLQ retention 14 days, alarm when DLQ depth is above 0.
+- **DLQ is a fail-safe, not a graveyard:** the DLQ triggers the Decision Lambda in route-only mode, so the claim reaches an adjuster with "automatic check unavailable". This implements "failures never auto-approve".
+- Idempotency: the client sends a `clientRequestId`. A conditional DynamoDB write prevents a retry from creating or approving a claim twice, and the Decision Lambda writes with a condition so a claim is decided once. FIFO is not needed because ordering does not matter.
 
 ### 5.3 Keep separate Lambdas, because they are the security boundary
 
-The extra Lambdas add a network hop and cold start. Keep them for one reason: **only `approve_within_limit` and `route_to_adjuster` hold IAM permission to write a decision status.** The Investigator's role is read-only and cannot write `AUTO_APPROVED`, even if its code or prompt is compromised. This is the structural defence against prompt injection that the engineering rules call for. Document it in the CDK stack, and add the required test that no path reaches approval above the limit or with a fraud signal.
+The extra Lambdas add a network hop and cold start. Keep them for one reason: **only the Decision Lambda holds IAM permission to write a decision status.** The Investigator's role is read-only and cannot write `AUTO_APPROVED`, even if its code or prompt is compromised. The API is deployed as two functions (customer and adjuster routes) for the same reason: separate roles. This is the structural defence against prompt injection that the engineering rules call for. Document it in the CDK stack, and add the required test that no path reaches approval above the limit or with a fraud signal.
 
 Latency mitigation: provisioned concurrency is not serverless-cheap, so use small Node.js or Python bundles without heavy dependencies, and compute photo hashes at upload time (5.5), not at decision time.
 
@@ -153,7 +141,7 @@ An event on every decision would let payment, notification and analytics react w
 
 ### 5.5 Evidence and fraud pipeline
 
-- Browser uploads photos and documents with a presigned PUT. Limit type (JPEG, PNG, PDF) and size in the presign conditions.
+- Browser uploads photos and documents with a **presigned POST**, which can enforce a size range and content type (a presigned PUT cannot enforce size). Types: JPEG, PNG, PDF. Up to 5 MB per file.
 - An S3 event Lambda computes SHA-256, pHash and EXIF, and writes to `EvidenceIndex` before the claim is submitted. Identifiers extracted from the evidence (IMEI, VIN, report number) go into the same index so reuse can be detected.
 - **Trust model:** the claim and files are untrusted, the system of record decides, and model reads of images and documents are signals. See `architecture.md`.
 - **Claim type packs** define required evidence, causes, caps and identifiers per tenant and category.
@@ -211,6 +199,14 @@ Emit as CloudWatch custom metrics, show on the dashboard and on the adjuster con
 | Prompt injection in claim text | Text is delimited data, outputs are schema-checked, and the agent role can't write approval |
 | DynamoDB conditional write fails | Decision not recorded as approved, claim routes |
 
+### 5.12 How claims and images reach the backend, and the compute choice
+
+- **Claims** arrive as small JSON through the API (metadata and evidence IDs, schema-validated). **Images and documents never go through the API.** They go from the browser to private S3 with presigned POST. This avoids the API Gateway and Lambda payload limits, keeps image bytes out of logs and queues, and lets S3 enforce the size and type limits.
+- **Who reads S3:** the Evidence Processor (to hash and normalize), the Worker (to pass the evidence to the agent), and the API Lambda only to presign short-lived GET links for the customer and adjuster. The agent itself has no S3 access.
+- **API routes** are listed in `architecture.md`: policies, evidence upload URLs, claim submit, claim status and list, adjuster queue, evidence link, adjuster resolution, impact metrics.
+- **Compute:** Lambda for everything except the agent (AgentCore Runtime). Claim traffic is bursty, Lambda scales to zero, and the queue already isolates it. The Worker is the one component that could move to Fargate later because it only reads from SQS. A Lambda Worker costs about $0.00013 per claim, and an always-on 1 vCPU, 2 GB Fargate task costs about $36 a month, so they cross at roughly 270,000 claims a month (list prices to be re-checked). EC2 is not recommended: patching and capacity management for no benefit here.
+- **Network:** the MVP uses IAM-scoped access over TLS, with no VPC. Interface endpoints cost per hour per Availability Zone, so VPC endpoints, WAF on a CloudFront distribution in front of the API, and private connectivity are pilot hardening for regulated tenants.
+
 ## 6. MVP, pilot and scale
 
 | | MVP (hackathon) | Pilot (about 8 to 12 weeks, one design partner) | Scale |
@@ -240,19 +236,25 @@ Matches the script in `product.md`:
 
 | # | Decision | Result |
 |---|---|---|
-| 1 | Agent design | **Option C.** Investigator agent on AgentCore Runtime, read-only tools through AgentCore Gateway, decision in code outside the agent. Fixed pipeline is the fallback if latency is too high. |
-| 2 | Async submit | Yes. 202 and polling, client request ID for idempotency. |
-| 3 | Tools | Read-only tools via Gateway. Decision functions are private and hold the only decision-write permission. |
+| 1 | Agent design | **Option C.** Investigator agent on AgentCore Runtime, read-only tools through AgentCore Gateway with an Interceptor, decision in code outside the agent. Fixed pipeline is the fallback if latency is too high. |
+| 2 | Async submit | **SQS with a DLQ.** 202 and polling. The DLQ routes the claim to an adjuster. |
+| 3 | Tools | Read-only tools via Gateway. The Decision Lambda is private and holds the only decision-write permission. |
 | 4 | Event bus | Deferred to the pilot. |
 | 5 | Tenancy | `tenantId` in all keys, from the JWT. Sharded queue index. One tenant for the MVP. |
 | 6 | Thresholds | SSM for the kill switch and global defaults. Caps per category and cause in claim type packs. Values copied into the audit record. |
-| 7 | Pilot controls | Shadow mode, QA sampling, override analytics and the kill switch are pilot items. The kill switch is in the MVP. |
+| 7 | Pilot controls | Shadow mode, QA sampling, override analytics are pilot items. The kill switch is in the MVP. |
 | 8 | Observability | AgentCore Observability and CloudWatch baseline plus the console impact panel. CloudWatch Omni is a stretch goal. |
-| - | Demo scope | Phones (damage and theft) and cars (low severity only). Health bills out of scope. Theft can auto-approve with a matching police report, under a lower cap. |
+| 9 | Region and model | us-east-1. Claude Haiku 5.5 with prompt caching and `maxTokens` limits. |
+| 10 | Compute | Lambda. Fargate is a later option behind the same queue. EC2 not recommended. |
+| 11 | Latency target | p50 about 4 s, p95 up to 6 s. |
+| 12 | Evidence upload | Presigned POST direct to S3. Metadata only through the API. |
+| 13 | Auto-approve caps | Starting values: phone damage $500, phone theft $300, car windscreen $250, everything else $0. To be tuned in shadow mode. |
+| - | Demo scope | Phones (damage and theft) and cars (low severity only). Health bills out of scope. |
 
 ## 9. Still open
 
-1. AWS Region and Bedrock model, including AgentCore Runtime, Gateway and Observability availability in that Region. Not verified yet.
-2. Auto-approve caps per category and cause.
-3. Whether the agent's happy-path latency meets the target after the first build.
-4. Real inputs for the value model from a design partner.
+1. Account checks: Bedrock quotas for Haiku 5.5, AgentCore Runtime, Gateway and interceptor availability in us-east-1, Lambda concurrency quota.
+2. Global or US geo inference profile for Haiku 5.5 (10% price difference, data routing).
+3. Whether the happy path stays within p50 about 4 s and p95 up to 6 s after the first build. Per-stage metrics will show where the time goes.
+4. Real inputs for the value model from a design partner. Until then the numbers are labelled assumptions with the published results in `docs/value-model.md` as context.
+5. Primary sources for the secondary-source figures (Aviva savings, Lemonade ratios) before the pitch.

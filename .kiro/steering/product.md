@@ -85,7 +85,7 @@ Matching a police report to the policy proves consistency, not authenticity. A f
 5. **Next steps (30 s):** pilot in shadow mode, police report verification, payment integration, policy PDF ingestion, more tenants.
 
 Demo implications for the build:
-- The happy path must complete in seconds. No long waits.
+- The happy path must complete in seconds: p50 about 4 s, p95 up to 6 s from submit to final status. No long waits. The console shows progress while it polls.
 - Seed data must include a policy for the demo customer and a prior claim `CLM-1042` with a photo, so the duplicate-photo reason can name it.
 - Seed policy must cover the phone but leave at least one category or cause uncovered, so a "not covered, routed with reason" case can be shown if a judge asks.
 - Seed data must include the insured phone's IMEI and the car's plate on the policy, a synthetic damaged-phone photo showing the IMEI, and a synthetic police report whose name and IMEI match the policy. All synthetic.
@@ -109,6 +109,8 @@ Keep the assumptions in one documented place (for example `docs/value-model.md`)
 
 - **"Are you trusting what the customer uploads?"** No. The customer's claim and files are checked against the policy: the device identifier, the policyholder name and the dates must match, the photo and IMEI must not have been used before, and the model's reading of an image or document is only a signal. Anything unverified routes to a person.
 - **"What about fake or AI-generated photos and forged reports?"** We cannot prove authenticity automatically, and we say so. The defence is layered: low caps (lower for theft), identifier reuse checks, several independent signals, random audits of auto-approvals, and a kill switch. The roadmap adds provenance checks and report verification with the issuing authority.
+- **"Will it scale? Why Lambda and not containers?"** Claims arrive in bursts, so Lambda behind an SQS queue scales to zero and absorbs spikes, with a dead-letter queue that routes failed claims to an adjuster. The worker only reads from the queue, so it can move to Fargate later without changing anything else. Cost is about $0.002 per claim, and about $49 a month at 100,000 claims a year (`docs/cost-estimate.md`).
+- **"Where do the savings numbers come from?"** Published results from Allianz, Lemonade and Aviva, applied to a reference carrier with labelled assumptions, and cross-checked against industry expense ratios (`docs/value-model.md`).
 - **"Does this work for other insurers or products?"** Yes. A claim type pack defines causes, required evidence, caps and identifiers per tenant and category. Adding one is data. Each tenant's data is isolated by `tenantId`.
 - **"What if the company changes a policy, for example stops covering stolen phones?"** Policies are versioned structured records read at claim time. The change applies to the next claim with no redeploy. Each claim is judged on the version in force on the loss date, and the audit log records that version.
 - **"What about real policy PDFs with tables and charts?"** Next step. Bedrock multimodal extraction writes a draft structured policy, a person reviews it, and it is saved as a new version. Decisions never depend on text retrieval.
