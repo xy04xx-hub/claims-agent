@@ -3,7 +3,7 @@ import {
   GetCommand, QueryCommand, TransactWriteCommand, type DynamoDBDocumentClient, type QueryCommandInput,
 } from "@aws-sdk/lib-dynamodb";
 import type { ClaimTypePack, Policy } from "@claims-agent/domain";
-import { auditPk, claimKey, customerPk, evidenceByIdPk, evidenceIndexPk, packPk, policyPk, queuePk } from "./keys.js";
+import { UNASSIGNED_CLAIM_ID, auditPk, claimKey, customerPk, evidenceByIdPk, evidenceIndexPk, packPk, policyPk, queuePk } from "./keys.js";
 import { toClaim, toEvidenceRecord, toPack, toPolicy } from "./normalize.js";
 import type { ClaimRecord, CommitInput, CommitResult, EvidenceRecord, IndexType, Store } from "./types.js";
 
@@ -87,7 +87,7 @@ export class DynamoStore implements Store {
     });
     const ids = items
       .map((i) => (typeof i.claimId === "string" ? i.claimId : typeof i.sk === "string" ? i.sk.split("#")[0] : ""))
-      .filter((id) => id && id !== excludeClaimId);
+      .filter((id) => id && id !== excludeClaimId && id !== UNASSIGNED_CLAIM_ID);
     return [...new Set(ids)];
   }
 

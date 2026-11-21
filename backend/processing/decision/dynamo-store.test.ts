@@ -59,6 +59,25 @@ describe("DynamoStore.commitDecision", () => {
   });
 });
 
+describe("DynamoStore.findOtherClaims", () => {
+  const storeWith = (items: Record<string, unknown>[]) =>
+    new DynamoStore({ send: async () => ({ Items: items }) } as never, tables);
+
+  it("returns real claim IDs and never UNASSIGNED, whether claimId or the sk prefix carries it", async () => {
+    const withAttr = storeWith([
+      { claimId: "CLM-1042", sk: "CLM-1042#EVD-1042-1" },
+      { claimId: "UNASSIGNED", sk: "UNASSIGNED#EVD-T13-1" },
+      { claimId: "CLM-2001", sk: "CLM-2001#EVD-1" },
+    ]);
+    expect(await withAttr.findOtherClaims("t1", "SHA256", "abc", "CLM-2001")).toEqual(["CLM-1042"]);
+    const bySk = storeWith([{ sk: "CLM-1042#EVD-1042-1" }, { sk: "UNASSIGNED#EVD-T13-1" }]);
+    expect(await bySk.findOtherClaims("t1", "SHA256", "abc", "CLM-2001")).toEqual(["CLM-1042"]);
+  });
+  it("returns nothing when only unassigned rows exist", async () => {
+    expect(await storeWith([{ claimId: "UNASSIGNED", sk: "UNASSIGNED#EVD-1" }]).findOtherClaims("t1", "PHASH", "h", "CLM-2001")).toEqual([]);
+  });
+});
+
 describe("queueShard", () => {
   it("is stable and within 0 to 7", () => {
     for (const id of ["CLM-1", "CLM-1042", "CLM-2001", "CLM-zzz"]) {

@@ -1,6 +1,9 @@
 // Key formats from contracts/data-model.md. The Foundation tables use generic attribute names (pk, sk, gsi1pk, ...).
 import type { IndexType } from "./types.js";
 
+/** Claim ID the Evidence Processor writes before a claim exists. T-15 assigns the real ID. */
+export const UNASSIGNED_CLAIM_ID = "UNASSIGNED";
+
 export const claimKey = (tenantId: string, claimId: string) => ({ pk: `${tenantId}#${claimId}`, sk: "CLAIM" });
 export const policyPk = (tenantId: string, policyId: string) => `${tenantId}#${policyId}`;
 export const packPk = (tenantId: string, category: string) => `${tenantId}#${category}`;

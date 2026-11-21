@@ -77,7 +77,7 @@ export interface Store {
   getPack(tenantId: string, category: string): Promise<ClaimTypePack | undefined>;
   /** Missing entries are not an error: return what exists. */
   getEvidence(tenantId: string, evidenceIds: string[]): Promise<EvidenceRecord[]>;
-  /** Claim IDs, other than `excludeClaimId`, that own an index entry for this type and value. */
+  /** Claim IDs, other than `excludeClaimId`, that own an index entry for this type and value. Rows not yet assigned to a claim are ignored. */
   findOtherClaims(tenantId: string, type: IndexType, value: string, excludeClaimId: string): Promise<string[]>;
   /** Claims by this customer created at or after `sinceIso`, not counting `excludeClaimId`. */
   countRecentClaims(tenantId: string, customerId: string, sinceIso: string, excludeClaimId: string): Promise<number>;
