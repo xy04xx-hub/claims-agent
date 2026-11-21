@@ -107,7 +107,11 @@ function keyWords(key: string): string[] {
 }
 
 function secretKeyProblem(key: string): boolean {
-  const words = keyWords(key);
+  // Words by camelCase boundary (authToken) and by delimiters only (a_secRet, any letter case).
+  const words = [
+    ...keyWords(key),
+    ...key.split(/[^A-Za-z0-9]+/).filter(Boolean).map((w) => w.toLowerCase()),
+  ];
   if (words.some((w) => w === 'secret' || w === 'password' || w === 'token')) return true;
   return key.replace(/[^A-Za-z0-9]/g, '').toLowerCase().includes('apikey');
 }
