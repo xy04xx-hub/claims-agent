@@ -106,12 +106,16 @@ export class FoundationStack extends cdk.Stack implements FoundationResources {
       encryptionKey: dataKey,
       bucketKeyEnabled: true,
       objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
-      eventBridgeEnabled: true,
       cors: [buildCorsRule(props.config.consoleOrigins)],
       lifecycleRules: buildLifecycleRules(props.config.evidenceRetentionDays),
       removalPolicy: protection.removalPolicy,
       autoDeleteObjects: protection.autoDeleteObjects,
     });
+    // Native EventBridge notifications. The `eventBridgeEnabled` prop would add a
+    // Custom::S3BucketNotifications resource and a handler Lambda with its own role.
+    (bucket.node.defaultChild as s3.CfnBucket).notificationConfiguration = {
+      eventBridgeConfiguration: { eventBridgeEnabled: true },
+    };
     this.evidenceBucket = bucket;
 
     const specs = buildParameters(props.stage, props.config);
