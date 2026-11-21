@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { CI_PLACEHOLDER_ACCOUNT, resolveAccount } from '../lib/stage';
+import { CI_PLACEHOLDER_ACCOUNT, resolveAccount } from '../lib/stage.js';
 
 // Feature: b-t04-cdk-skeleton, Property 3: Account resolution
 // **Validates: Requirements 2.4, 2.10**
