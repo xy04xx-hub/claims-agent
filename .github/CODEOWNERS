@@ -1,0 +1,13 @@
+# Paths marked "changes need both" in .kiro/steering/repository.md.
+/.kiro/steering/ @xy04xx-hub @muzair110
+/.kiro/skills/ @xy04xx-hub @muzair110
+/contracts/ @xy04xx-hub @muzair110
+/backend/shared/ @xy04xx-hub @muzair110
+/infra/lib/constructs/claims-function.ts @xy04xx-hub @muzair110
+/infra/config/default.json @xy04xx-hub @muzair110
+/infra/config/demo.json @xy04xx-hub @muzair110
+/package.json @xy04xx-hub @muzair110
+/tests/e2e/ @xy04xx-hub @muzair110
+/docs/adr/ @xy04xx-hub @muzair110
+/docs/plan/ @xy04xx-hub @muzair110
+/.github/ @xy04xx-hub @muzair110
