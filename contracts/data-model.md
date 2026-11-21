@@ -38,7 +38,7 @@ Access: claims by customer; adjuster queue by tenant and status; duplicate submi
 | SK | `claimId#evidenceId` |
 | GSI `byEvidence` | PK `tenantId#evidenceId`, SK `type` |
 
-Attributes: `claimId`, `evidenceId`, `customerId`, `s3Key` (`tenantId/customerId/evidenceId`), `normalizedS3Key`, `contentType`, `sizeBytes`, `processingStatus` (`PENDING`, `READY`, `FAILED`), `exifDate`, `createdAt`. PHASH near-duplicate lookup compares Hamming distance against a bounded set of recent PHASH items for the tenant.
+Attributes: `type` (`SHA256`, `PHASH` or `IDENTIFIER`, same as in the PK), `value` (the hash, or the normalized identifier for `IDENTIFIER`: whitespace and hyphens removed, upper case), `kind` (`DEVICE_PHOTO`, `POLICE_REPORT`, `PLATE_PHOTO` or `STATEMENT`; the Decision Lambda reads it to check the required evidence), `claimId`, `evidenceId`, `customerId`, `s3Key` (`tenantId/customerId/evidenceId`), `normalizedS3Key`, `contentType`, `sizeBytes`, `processingStatus` (`PENDING`, `READY`, `FAILED`), `exifDate`, `createdAt`. PHASH near-duplicate lookup compares Hamming distance against a bounded set of recent PHASH items for the tenant.
 
 Access: evidence lookup by hash or identifier; evidence by ID.
 
