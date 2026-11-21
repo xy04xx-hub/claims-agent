@@ -96,4 +96,17 @@ describe('web config properties', () => {
       { numRuns: 300 },
     );
   });
+
+  // Feature: b-t07-web-stack, Property 3: Config round trip including the new keys
+  // **Validates: Requirements 6.7**
+  it('Property 3: a valid config survives a JSON round trip and is still accepted', () => {
+    fc.assert(
+      fc.property(validCspConfigArb, fileArb, (cfg, file) => {
+        const parsed = JSON.parse(JSON.stringify(cfg)) as unknown;
+        expect(parsed).toEqual(cfg);
+        expect(validateStageConfig(parsed, file)).toEqual(cfg);
+      }),
+      { numRuns: 100 },
+    );
+  });
 });
