@@ -1,7 +1,4 @@
 // Owner: A. Tests of the seed definitions. No AWS access.
-import { readFileSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { selectPolicyVersion } from "@claims-agent/domain";
@@ -10,16 +7,10 @@ import { validateDecision } from "../backend/processing/decision/schemas.js";
 import {
   CAR_PACK, CLM_1042, CUSTOMER_ID, EVIDENCE_FILES, IMEI_MISMATCH, IMEI_PHONE_1, IMEI_PHONE_2, LAPTOP_PACK, PHONE_PACK,
   POLICIES, POLICY_V1, POLICY_V2, SCENARIOS, TENANT_ID, assertValidEvidenceRow, assertValidPack, assertValidPolicy,
-  buildSeedItems, clm1042Decision, scenarioHashes, type PhotoInfo,
+  buildSeedItems, clm1042Decision, scenarioHashes,
 } from "../seed/definitions/index.js";
-import { dhash64Hex, sha256Hex } from "../seed/lib/hashing.js";
-import { decodePng } from "../seed/lib/png.js";
+import { realPhoto } from "./seed-e2e.helpers.js";
 
-const evidenceDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../seed/evidence");
-export function realPhoto(): PhotoInfo {
-  const bytes = readFileSync(path.join(evidenceDir, "phone-damaged-imei2.png"));
-  return { sha256: sha256Hex(bytes), phash: dhash64Hex(decodePng(bytes)), sizeBytes: bytes.length, contentType: "image/png" };
-}
 const luhn = (s: string) => [...s].reverse().reduce((t, c, i) => {
   let d = Number(c);
   if (i % 2 === 1) { d *= 2; if (d > 9) d -= 9; }
