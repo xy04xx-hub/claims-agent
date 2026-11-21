@@ -1,6 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "types": ["node"] },
-  "include": ["decision"],
+  "include": ["decision", "evidence-processor"],
   "exclude": ["node_modules"]
 }
