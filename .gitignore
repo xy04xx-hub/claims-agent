@@ -2,3 +2,12 @@ refs/
 tools/diagram/node_modules/
 tools/diagram/.cache/
 tools/diagram/.libs/
+node_modules/
+cdk.out/
+dist/
+coverage/
+.env*
+!.env.example
+__pycache__/
+*.pyc
+.DS_Store

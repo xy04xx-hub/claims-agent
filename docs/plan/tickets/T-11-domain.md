@@ -8,7 +8,7 @@
 | Judging items | SEC5, OE3, BIZ-C |
 | Estimate | 4 h |
 | Status | Todo |
-| Branch | `<A|B>/T-11-domain` |
+| Branch | `a/T-11-domain` |
 
 ## Why
 

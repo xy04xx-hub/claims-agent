@@ -8,7 +8,7 @@
 | Judging items | OE1, SEC3, COST3 |
 | Estimate | 3 h |
 | Status | Todo |
-| Branch | `<A|B>/T-04-cdk-skeleton` |
+| Branch | `b/T-04-cdk-skeleton` |
 
 ## Why
 
@@ -16,7 +16,7 @@ One CDK app that both people extend without stepping on each other, with securit
 
 ## Tasks
 
-- [ ] npm workspaces layout: `infra/` (CDK, TypeScript), `backend/` (Lambda code: `domain`, `api`, `processing`, `tools`), `agent/`, `frontend/`, `contracts/`, `scripts/`.
+- [ ] npm workspaces layout exactly as `.kiro/steering/repository.md` section 2, including the empty owner folders with a `README.md` each.
 - [ ] `infra/bin/app.ts`: reads `-c stage=<name>` (required), creates stacks `ClaimsAgent-<stage>-Foundation`, `-Auth`, `-Api`, `-Processing`, `-Agent`, `-Web`, `-Ops` in us-east-1. Pass resources between stacks as typed props, not string imports.
 - [ ] Empty stack classes with an owner comment: B owns Foundation, Auth, Api, Web, Ops; A owns Processing, Agent.
 - [ ] Shared construct `ClaimsFunction` (wraps `NodejsFunction`): Node.js 22, ARM64, explicit timeout and memory, its own role, Powertools layer or bundle, log retention 14 days, environment from props, tracing on.

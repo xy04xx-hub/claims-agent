@@ -8,7 +8,7 @@
 | Judging items | OE1, OE3, OE4, BIZ-C |
 | Estimate | 3 h |
 | Status | Todo |
-| Branch | `<A|B>/T-29-demo-deploy` |
+| Branch | `a/T-29-demo-deploy` or `b/T-29-demo-deploy` (whoever leads) |
 
 ## Why
 

@@ -1,0 +1,10 @@
+# Generated files: never hand-merge, regenerate instead (see .kiro/steering/repository.md)
+docs/architecture.drawio linguist-generated=true
+docs/architecture.png binary linguist-generated=true
+docs/plan/kickoff.pdf binary linguist-generated=true
+package-lock.json linguist-generated=true
+
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.pdf binary

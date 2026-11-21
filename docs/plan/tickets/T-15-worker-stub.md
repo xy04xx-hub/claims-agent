@@ -8,7 +8,7 @@
 | Judging items | OE3, OE4, BIZ-C |
 | Estimate | 3 h |
 | Status | Todo |
-| Branch | `<A|B>/T-15-worker-stub` |
+| Branch | `a/T-15-worker-stub` |
 
 ## Why
 

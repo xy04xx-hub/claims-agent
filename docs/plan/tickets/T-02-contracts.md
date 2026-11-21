@@ -8,7 +8,7 @@
 | Judging items | SEC2, SEC5, BIZ-C |
 | Estimate | 3 h |
 | Status | Todo |
-| Branch | `<A|B>/T-02-contracts` |
+| Branch | `a/T-02-contracts` or `b/T-02-contracts` (whoever leads) |
 
 ## Why
 

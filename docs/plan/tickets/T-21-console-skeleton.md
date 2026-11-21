@@ -8,7 +8,7 @@
 | Judging items | SEC1, SEC2 |
 | Estimate | 3 h |
 | Status | Todo |
-| Branch | `<A|B>/T-21-console-skeleton` |
+| Branch | `b/T-21-console-skeleton` |
 
 ## Why
 

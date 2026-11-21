@@ -8,7 +8,7 @@
 | Judging items | COST4, OE3, OE4, SEC5, BIZ-C |
 | Estimate | 6 h |
 | Status | Todo |
-| Branch | `<A|B>/T-19-agent` |
+| Branch | `a/T-19-agent` |
 
 ## Why
 

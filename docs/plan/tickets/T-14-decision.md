@@ -8,7 +8,7 @@
 | Judging items | OE3, OE2, SEC3, SEC5 |
 | Estimate | 4 h |
 | Status | Todo |
-| Branch | `<A|B>/T-14-decision` |
+| Branch | `a/T-14-decision` |
 
 ## Why
 

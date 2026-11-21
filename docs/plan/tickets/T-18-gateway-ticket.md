@@ -8,7 +8,7 @@
 | Judging items | SEC3, SEC5, SEC2 |
 | Estimate | 5 h |
 | Status | Todo |
-| Branch | `<A|B>/T-18-gateway-ticket` |
+| Branch | `a/T-18-gateway-ticket` |
 
 ## Why
 

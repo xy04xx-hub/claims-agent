@@ -8,7 +8,7 @@ This plan turns `architecture.md` into tickets that two people can work on in pa
 
 ## 1. Roles
 
-Names are placeholders. Replace "A" and "B" with your names in this file and in the tickets.
+**A** is the teammate, working from personal branch `kiro-a`. **B** is muzair110, working from `owner-b`. Folder ownership, branches and merge rules are in `.kiro/steering/repository.md`.
 
 | | **A: Claims engine and agent** | **B: Platform, API and console** |
 |---|---|---|
@@ -28,7 +28,7 @@ The two workshop accounts are separate, so each person deploys a full copy of th
 |---|---|---|---|---|
 | `dev-a` | A's account | A | A's feature branches | A's development and verification |
 | `dev-b` | B's account | B | B's feature branches | B's development and verification |
-| `demo` | **One** chosen account (decide in T-03; default: A's account `579813007466`) | Either, from `main` only | `main` | Integration checkpoints and the judged demo |
+| `demo` | **One** chosen account (confirm in T-03; default: B's account `579813007466`) | Either, from `main` only | `main` | Integration checkpoints and the judged demo |
 
 Rules:
 
@@ -39,7 +39,7 @@ Rules:
 
 ## 3. Engineering practice
 
-- **Repository:** trunk-based on `main` with short feature branches named `<A|B>/T-xx-short-name`. The current `kiro` branch is merged into `main` in T-01.
+- **Repository:** trunk-based on `main` with one short ticket branch per ticket, cut from `main` and named `a/T-xx-short-name` (A) or `b/T-xx-short-name` (B). Personal branches `kiro-a` and `owner-b` are scratch only. Full rules, folder ownership and daily commands: `.kiro/steering/repository.md`.
 - **Pull requests:** every change goes through a PR reviewed by the other person. Use the PR template from T-01 (ticket ID, verification evidence, judging items touched). Squash merge. Keep PRs small, ideally under about 400 changed lines.
 - **CI (GitHub Actions, T-04):** install, lint, typecheck, unit tests, `cdk synth` for a dummy stage, cdk-nag, and a secret scan. It runs on every PR. CI does not deploy, because workshop accounts have no CI credentials.
 - **Languages:** TypeScript for CDK and all Lambdas (Node.js 22, ARM64, bundled with esbuild through `NodejsFunction`). The agent's language is decided in the T-16 spike: Python if the AgentCore tooling for it is clearly simpler, otherwise TypeScript. JSON Schemas in `contracts/` are the source of truth that both languages validate against.
