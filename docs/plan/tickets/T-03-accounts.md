@@ -8,7 +8,7 @@
 | Judging items | OE1, COST4 |
 | Estimate | 1 h |
 | Status | Todo |
-| Branch | `<A|B>/T-03-accounts` |
+| Branch | `a/T-03-accounts` or `b/T-03-accounts` (whoever leads) |
 
 ## Why
 

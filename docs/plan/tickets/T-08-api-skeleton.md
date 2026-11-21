@@ -8,7 +8,7 @@
 | Judging items | SEC1, SEC2, SEC5, OE2 |
 | Estimate | 3 h |
 | Status | Todo |
-| Branch | `<A|B>/T-08-api-skeleton` |
+| Branch | `b/T-08-api-skeleton` |
 
 ## Why
 

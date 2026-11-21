@@ -8,7 +8,7 @@
 | Judging items | SEC3, SEC5, BIZ-C |
 | Estimate | 4 h |
 | Status | Todo |
-| Branch | `<A|B>/T-17-tools` |
+| Branch | `a/T-17-tools` |
 
 ## Why
 

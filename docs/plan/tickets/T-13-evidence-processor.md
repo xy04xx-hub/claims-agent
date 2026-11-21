@@ -8,7 +8,7 @@
 | Judging items | SEC5, OE4, BIZ-C |
 | Estimate | 4 h |
 | Status | Todo |
-| Branch | `<A|B>/T-13-evidence-processor` |
+| Branch | `a/T-13-evidence-processor` |
 
 ## Why
 

@@ -8,7 +8,7 @@
 | Judging items | SEC4, SEC3, COST3, OE1 |
 | Estimate | 3 h |
 | Status | Todo |
-| Branch | `<A|B>/T-05-foundation` |
+| Branch | `b/T-05-foundation` |
 
 ## Why
 

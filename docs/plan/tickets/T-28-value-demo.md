@@ -8,7 +8,7 @@
 | Judging items | BIZ-V, BIZ-P, COST5 |
 | Estimate | 4 h |
 | Status | Todo |
-| Branch | `<A|B>/T-28-value-demo` |
+| Branch | `a/T-28-value-demo` or `b/T-28-value-demo` (whoever leads) |
 
 ## Why
 

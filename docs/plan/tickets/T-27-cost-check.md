@@ -8,7 +8,7 @@
 | Judging items | COST1, COST2, COST4 |
 | Estimate | 2 h |
 | Status | Todo |
-| Branch | `<A|B>/T-27-cost-check` |
+| Branch | `a/T-27-cost-check` |
 
 ## Why
 

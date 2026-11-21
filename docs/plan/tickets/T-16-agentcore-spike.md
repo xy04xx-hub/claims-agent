@@ -8,7 +8,7 @@
 | Judging items | OE1, SEC3 |
 | Estimate | 3 h |
 | Status | Todo |
-| Branch | `<A|B>/T-16-agentcore-spike` |
+| Branch | `a/T-16-agentcore-spike` |
 
 ## Why
 
