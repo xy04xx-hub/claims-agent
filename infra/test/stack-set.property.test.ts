@@ -44,5 +44,6 @@ describe('Property 2: stack set', () => {
       }),
       { numRuns: 100 },
     );
-  });
+    // Foundation synth is heavy; 100 full synths exceed the 5 s default.
+  }, 60_000);
 });

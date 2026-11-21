@@ -75,7 +75,7 @@ describe('ClaimsFunction', () => {
     expect(() => build({ timeout: Duration.seconds(900), memorySize: 10240 })).not.toThrow();
   });
 
-  it('is not instantiated by any stack: dev-a has zero Lambda functions', () => {
+  it('is not instantiated by any stack: only the CDK auto-delete provider Lambda exists in dev-a Foundation', () => {
     const app = new App();
     const config = loadStageConfig('dev-a', path.resolve(here, '../config'), () => undefined);
     const props = {
@@ -94,7 +94,16 @@ describe('ClaimsFunction', () => {
       new AgentStack(app, 'Agent', props),
     ];
     for (const s of stacks) {
-      Template.fromStack(s).resourceCountIs('AWS::Lambda::Function', 0);
+      const t = Template.fromStack(s);
+      if (s === stacks[0]) {
+        // Foundation: only the CDK-managed S3 auto-delete provider, no ClaimsFunction.
+        t.resourceCountIs('AWS::Lambda::Function', 1);
+        t.resourceCountIs('Custom::S3AutoDeleteObjects', 1);
+        const [logicalId] = Object.keys(t.findResources('AWS::Lambda::Function'));
+        expect(logicalId).toMatch(/^CustomS3AutoDeleteObjectsCustomResourceProvider/);
+      } else {
+        t.resourceCountIs('AWS::Lambda::Function', 0);
+      }
     }
   });
 });
