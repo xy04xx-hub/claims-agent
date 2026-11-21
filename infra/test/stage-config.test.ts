@@ -65,6 +65,7 @@ describe('shipped config files', () => {
     expect(cfg.maxTokens).toBeGreaterThan(0);
     expect(cfg.evidenceRetentionDays).toBe(90);
     expect(cfg.consoleOrigins).toEqual(['http://localhost:5173']);
+    expect(cfg.cspApiOrigins).toEqual(['https://*.execute-api.us-east-1.amazonaws.com']);
     expect(cfg.earlyClaimDays).toBe(14);
     expect(cfg.frequencyWindowDays).toBe(30);
     expect(cfg.frequencyMaxClaims).toBe(3);
