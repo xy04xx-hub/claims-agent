@@ -21,6 +21,7 @@ claims-agent/
 ├── .github/                    B  CI workflow, PR template, CODEOWNERS (changes need both)
 ├── .kiro/
 │   ├── steering/                  both, changes need both
+│   ├── specs/                     one folder per ticket, owned by the ticket owner (section 7)
 │   └── skills/                    both (vendored, see SOURCE.md)
 ├── contracts/                  both  JSON Schemas + examples, VERSION; changes need both
 │   ├── api/                       request and response per route
@@ -142,3 +143,14 @@ Deploy to `demo` only from an up-to-date `main` (see T-29).
 - Use ticket branches as in section 5. Do not commit to `main`, `kiro`, `kiro-a` or `owner-b` directly.
 - Follow the commit and PR naming in section 3.
 - Never resolve conflicts in generated files by hand (section 4, rule 5).
+
+## 7. Specs
+
+Kiro specs (`requirements.md`, `design.md`, `tasks.md`) turn a ticket into reviewed requirements, a design and executable tasks.
+
+- **One spec per ticket**, created on that ticket's branch and merged in the same PR as the code. Folder name: `.kiro/specs/<a|b>-t<xx>-<slug>/`, for example `.kiro/specs/b-t04-cdk-skeleton/`. The owner prefix keeps A's and B's specs from colliding.
+- **Seed the spec from the ticket file**, which is the source of truth for scope: start the spec with `#docs/plan/tickets/T-xx-....md` in the prompt. The spec may add detail but must not add scope. If it needs more scope, update the ticket first.
+- **Workflow:** Requirements-First for tickets with security or behaviour rules (T-06, T-08, T-09, T-10, T-14, T-18, T-19, T-22, T-23). Quick Spec is fine for small, well-understood tickets (T-04, T-05, T-07, T-21, T-24, T-25). No spec for docs-only tickets (T-26, T-28).
+- **Requirements** use EARS (`WHEN ... THE SYSTEM SHALL ...`) and must include every acceptance criterion of the ticket. **Design** follows `architecture.md` and `contracts/`. **Tasks** end with the ticket's verification steps.
+- Each spec task maps to one commit (`feat(T-04): <task>`), so the PR history reads like the task list.
+- A spec is done when every required task is checked, the ticket's Definition of Done is met, and the PR is merged. Do not edit another owner's spec; comment on their PR instead.
