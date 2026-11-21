@@ -27,6 +27,8 @@ export interface Evaluation {
   policyVersion: number;
   packVersion: number;
   thresholds: Record<string, number | boolean | string>;
+  model?: string;
+  promptVersion?: string;
 }
 
 const REVIEW_CUSTOMER = "Your claim needs a quick review by our team.";

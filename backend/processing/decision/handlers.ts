@@ -1,3 +1,4 @@
+import { buildAudit } from "./audit.js";
 import { evaluate, failSafeDecision, routedDecision, type Evaluation, type Proposal } from "./evaluate.js";
 import { validateDecision, validateProposal } from "./schemas.js";
 import type {
@@ -29,14 +30,15 @@ async function decideClaim(deps: Deps, claim: ClaimRecord, rawProposal: unknown)
     return fallbackEval(claim, routedDecision(claim.claimId, "PROPOSAL_INVALID", `Proposal failed validation: ${checked.error}`));
   }
   const proposal = rawProposal as Proposal;
+  const meta = { model: proposal.model, promptVersion: proposal.promptVersion };
   if (proposal.claimId !== claim.claimId) {
     return fallbackEval(claim, routedDecision(claim.claimId, "PROPOSAL_INVALID", "Proposal is for a different claim."));
   }
   try {
-    return await evaluate(deps, claim, proposal);
+    return { ...(await evaluate(deps, claim, proposal)), ...meta };
   } catch (err) {
     deps.log.error("evaluation failed, routing", { claimId: claim.claimId, error: err instanceof Error ? err.name : "unknown" });
-    return fallbackEval(claim, failSafeDecision(claim.claimId));
+    return { ...fallbackEval(claim, failSafeDecision(claim.claimId)), ...meta };
   }
 }
 
@@ -51,7 +53,7 @@ function fallbackEval(claim: ClaimRecord, decision: Evaluation["decision"]): Eva
 }
 
 export function createHandlers(deps: Deps): Handlers {
-  const decide: Handlers["decide"] = async (rawEvent) => {
+  const decide: Handlers["decide"] = async (rawEvent, ctx) => {
     const event = parseEvent(rawEvent);
     const claim = await deps.store.getClaim(event.tenantId, event.claimId);
     if (!claim) return { result: "NOT_FOUND", claimId: event.claimId };
@@ -60,7 +62,12 @@ export function createHandlers(deps: Deps): Handlers {
     const evaluation = await decideClaim(deps, claim, event.proposal);
     const valid = validateDecision(evaluation.decision);
     if (!valid.ok) throw new Error(`decision failed schema validation: ${valid.error}`);
-    // Persistence (conditional write plus audit) is added in the next tasks.
+    const decidedAt = deps.now().toISOString();
+    const audit = buildAudit({
+      claim, evaluation, timestamp: decidedAt, actorId: "decision-lambda", requestId: ctx.awsRequestId, jti: event.jti,
+    });
+    const outcome = await deps.store.commitDecision({ claim, decision: evaluation.decision, audit, decidedAt });
+    if (outcome === "ALREADY_DECIDED") return { result: "ALREADY_DECIDED", claimId: claim.claimId };
     return { result: "DECIDED", decision: evaluation.decision };
   };
 
