@@ -2,5 +2,24 @@
   "name": "@claims-agent/processing",
   "version": "0.0.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aws-lambda-powertools/logger": "^2.36.0",
+    "@aws-lambda-powertools/metrics": "^2.36.0",
+    "@aws-sdk/client-dynamodb": "^3.1175.0",
+    "@aws-sdk/client-ssm": "^3.1175.0",
+    "@aws-sdk/lib-dynamodb": "^3.1175.0",
+    "@claims-agent/domain": "*",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.1"
+  }
 }
