@@ -1,4 +1,4 @@
-import { buildAudit } from "./audit.js";
+import { buildAudit, reasonCode } from "./audit.js";
 import { evaluate, failSafeDecision, routedDecision, type Evaluation, type Proposal } from "./evaluate.js";
 import { validateDecision, validateJobMessage, validateProposal } from "./schemas.js";
 import type {
@@ -52,8 +52,26 @@ function fallbackEval(claim: ClaimRecord, decision: Evaluation["decision"]): Eva
   };
 }
 
+/** AutoApproved or Routed (dimension reason), FailSafeRouted, and DecisionLatencyMs. Each is its own EMF line. */
+function recordMetrics(deps: Deps, decision: Evaluation["decision"], startedAt: number): void {
+  const { metrics } = deps;
+  if (decision.outcome === "AUTO_APPROVED") {
+    metrics.count("AutoApproved");
+  } else {
+    metrics.count("Routed", { reason: reasonCode(decision) ?? "UNKNOWN" });
+  }
+  metrics.flush();
+  if (decision.failSafe) {
+    metrics.count("FailSafeRouted");
+    metrics.flush();
+  }
+  metrics.latency(deps.now().getTime() - startedAt);
+  metrics.flush();
+}
+
 export function createHandlers(deps: Deps): Handlers {
   const decide: Handlers["decide"] = async (rawEvent, ctx) => {
+    const startedAt = deps.now().getTime();
     const event = parseEvent(rawEvent);
     const claim = await deps.store.getClaim(event.tenantId, event.claimId);
     if (!claim) return { result: "NOT_FOUND", claimId: event.claimId };
@@ -67,12 +85,24 @@ export function createHandlers(deps: Deps): Handlers {
       claim, evaluation, timestamp: decidedAt, actorId: "decision-lambda", requestId: ctx.awsRequestId, jti: event.jti,
     });
     const outcome = await deps.store.commitDecision({ claim, decision: evaluation.decision, audit, decidedAt });
-    if (outcome === "ALREADY_DECIDED") return { result: "ALREADY_DECIDED", claimId: claim.claimId };
+    if (outcome === "ALREADY_DECIDED") {
+      deps.log.warn("claim already decided, nothing written", { claimId: claim.claimId, requestId: ctx.awsRequestId });
+      return { result: "ALREADY_DECIDED", claimId: claim.claimId };
+    }
+    recordMetrics(deps, evaluation.decision, startedAt);
+    deps.log.info("decision committed", {
+      claimId: claim.claimId,
+      requestId: ctx.awsRequestId,
+      outcome: evaluation.decision.outcome,
+      reason: reasonCode(evaluation.decision),
+      failSafe: evaluation.decision.failSafe === true,
+    });
     return { result: "DECIDED", decision: evaluation.decision };
   };
 
   /** DLQ entry point. Always routes: the automatic check could not finish. Never approves. */
   const routeOne = async (record: SqsEvent["Records"][number], ctx: InvokeContext) => {
+    const startedAt = deps.now().getTime();
     const body: unknown = JSON.parse(record.body);
     const valid = validateJobMessage(body);
     if (!valid.ok) throw new Error(`job message failed validation: ${valid.error}`);
@@ -88,7 +118,10 @@ export function createHandlers(deps: Deps): Handlers {
     const audit = buildAudit({
       claim, evaluation, timestamp: decidedAt, actorId: "decision-lambda:routeOnly", requestId: ctx.awsRequestId,
     });
-    await deps.store.commitDecision({ claim, decision: evaluation.decision, audit, decidedAt });
+    const outcome = await deps.store.commitDecision({ claim, decision: evaluation.decision, audit, decidedAt });
+    if (outcome === "ALREADY_DECIDED") return;
+    recordMetrics(deps, evaluation.decision, startedAt);
+    deps.log.info("fail-safe route committed", { claimId, requestId: ctx.awsRequestId });
   };
 
   const routeOnly: Handlers["routeOnly"] = async (event, ctx) => {
