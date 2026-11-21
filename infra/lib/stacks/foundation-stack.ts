@@ -117,6 +117,11 @@ export class FoundationStack extends cdk.Stack implements FoundationResources {
       eventBridgeConfiguration: { eventBridgeEnabled: true },
     };
     this.evidenceBucket = bucket;
+    cdk.Validations.of(bucket).acknowledge({
+      id: 'AwsSolutions-S1',
+      reason:
+        'Server access logging is deferred to the pilot. Object access is recorded by CloudTrail data events instead, and the bucket holds only synthetic demo evidence.',
+    });
 
     const specs = buildParameters(props.stage, props.config);
     const params = {} as Record<ParameterKey, ssm.StringParameter>;
