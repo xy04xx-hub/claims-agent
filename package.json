@@ -1,0 +1,28 @@
+{
+  "name": "claims-agent",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "infra",
+    "backend/*",
+    "agent",
+    "frontend",
+    "contracts",
+    "tools/diagram"
+  ],
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc --noEmit -p scripts",
+    "test": "vitest run",
+    "synth": "npm exec --workspace infra -- cdk synth -c stage=ci",
+    "deploy": "tsx scripts/run-stack-command.ts deploy",
+    "destroy": "tsx scripts/run-stack-command.ts destroy",
+    "seed": "tsx scripts/seed-entry.ts",
+    "outputs": "tsx scripts/outputs.ts"
+  },
+  "devDependencies": {
+    "eslint": "^10.15.0",
+    "typescript-eslint": "^8.73.0"
+  }
+}

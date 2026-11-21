@@ -1,0 +1,18 @@
+{
+  "autoApproveCaps": {
+    "phoneAccidentalDamage": 500,
+    "phoneTheft": 300,
+    "phoneLoss": 0,
+    "carWindscreenOrCosmetic": 250,
+    "carSevere": 0
+  },
+  "bedrockModelId": "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+  "maxTokens": 1024,
+  "maxEvidenceImageBytes": 3670016,
+  "maxUploadBytes": 5242880,
+  "maxEvidenceFilesPerClaim": 6,
+  "maxDescriptionLength": 1000,
+  "jobTicketTtlSeconds": 60,
+  "workerTimeoutSeconds": 60,
+  "sqsMaxReceiveCount": 3
+}
