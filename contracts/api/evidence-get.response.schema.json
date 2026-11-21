@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GET /claims/{claimId}/evidence/{evidenceId} response (presigned GET, 60 s)",
+  "type": "object", "additionalProperties": false, "required": ["url", "expiresAt", "contentType"],
+  "properties": { "url": { "type": "string", "pattern": "^https://" }, "expiresAt": { "type": "string", "format": "date-time" }, "contentType": { "enum": ["image/jpeg", "image/png", "application/pdf"] } }
+}

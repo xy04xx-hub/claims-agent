@@ -1,0 +1,1 @@
+{ "items": [ { "claimId": "CLM-2002", "status": "ROUTED_TO_ADJUSTER", "amountClaimed": 180, "createdAt": "2026-11-21T10:02:00Z", "routedReasons": ["Photo matches claim CLM-1042 from last week."] } ], "nextCursor": "eyJwayI6IjEifQ" }

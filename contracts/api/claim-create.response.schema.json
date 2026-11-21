@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "POST /claims response (202)",
+  "type": "object", "additionalProperties": false, "required": ["claimId", "status"],
+  "properties": { "claimId": { "type": "string", "pattern": "^CLM-[A-Za-z0-9-]{1,40}$" }, "status": { "const": "PROCESSING" } }
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Investigator agent proposal. A signal only: code decides.",
+  "type": "object", "additionalProperties": false,
+  "required": ["claimId", "extracted", "evidenceAssessment", "customerText", "model"],
+  "properties": {
+    "claimId": { "type": "string", "pattern": "^CLM-[A-Za-z0-9-]{1,40}$" },
+    "extracted": { "type": "object", "additionalProperties": false, "required": ["itemCategory", "cause", "amount", "lossDate"], "properties": {
+      "itemCategory": { "type": "string", "maxLength": 40 },
+      "cause": { "enum": ["ACCIDENTAL_DAMAGE", "THEFT", "LOSS", "WINDSCREEN", "COSMETIC", "COLLISION", "INJURY", "THIRD_PARTY", "TOTAL_LOSS", "UNCLEAR"] },
+      "amount": { "type": "number", "minimum": 0 },
+      "lossDate": { "type": "string", "format": "date" },
+      "identifiers": { "type": "object", "additionalProperties": false, "properties": { "imei": { "type": "string", "maxLength": 40 }, "vin": { "type": "string", "maxLength": 40 }, "plate": { "type": "string", "maxLength": 20 }, "reportNumber": { "type": "string", "maxLength": 40 } } } } },
+    "evidenceAssessment": { "type": "array", "maxItems": 6, "items": { "type": "object", "additionalProperties": false, "required": ["evidenceId", "showsClaimedItem", "confidence"], "properties": {
+      "evidenceId": { "type": "string" },
+      "showsClaimedItem": { "type": "boolean" },
+      "damageConsistent": { "type": "boolean" },
+      "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+      "notes": { "type": "string", "maxLength": 300 } } } },
+    "customerText": { "type": "string", "maxLength": 500 },
+    "model": { "type": "string", "minLength": 1, "maxLength": 120, "description": "Bedrock inference profile ID used for the call" },
+    "promptVersion": { "type": "string", "maxLength": 40 } }
+}

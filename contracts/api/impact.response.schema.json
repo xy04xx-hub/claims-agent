@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GET /impact response",
+  "type": "object", "additionalProperties": false,
+  "required": ["totalClaims", "autoHandled", "autoHandleRate", "latencyMsP50", "latencyMsP95", "hoursSaved", "dollarsSaved"],
+  "properties": {
+    "totalClaims": { "type": "integer", "minimum": 0 },
+    "autoHandled": { "type": "integer", "minimum": 0 },
+    "autoHandleRate": { "type": "number", "minimum": 0, "maximum": 1 },
+    "latencyMsP50": { "type": "number", "minimum": 0 },
+    "latencyMsP95": { "type": "number", "minimum": 0 },
+    "hoursSaved": { "type": "number", "minimum": 0 },
+    "dollarsSaved": { "type": "number", "minimum": 0 } }
+}

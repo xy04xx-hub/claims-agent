@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "verify_evidence input. Fields the model read from the evidence. No claim or customer ID.",
+  "type": "object", "additionalProperties": false, "required": ["extractions"],
+  "properties": { "extractions": { "type": "array", "minItems": 1, "maxItems": 6, "items": { "type": "object", "additionalProperties": false, "required": ["evidenceId", "confidence"], "properties": {
+    "evidenceId": { "type": "string", "pattern": "^EVD-[A-Za-z0-9-]{1,40}$" },
+    "holderName": { "type": "string", "maxLength": 100 },
+    "identifier": { "type": "string", "maxLength": 40 },
+    "incidentDate": { "type": "string", "format": "date" },
+    "reportDate": { "type": "string", "format": "date" },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 } } } } }
+}

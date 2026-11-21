@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "verify_evidence output",
+  "type": "object", "additionalProperties": false, "required": ["consistent", "checks"],
+  "properties": {
+    "consistent": { "type": "boolean" },
+    "checks": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["code", "passed"], "properties": { "code": { "enum": ["IDENTIFIER_MATCHES_POLICY", "NAME_MATCHES_POLICY", "DATES_CONSISTENT", "CONFIDENCE_SUFFICIENT"] }, "passed": { "type": "boolean" }, "detail": { "type": "string", "maxLength": 300 } } } } }
+}

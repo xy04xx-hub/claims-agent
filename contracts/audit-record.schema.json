@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AuditLog record. Append-only. No photo bytes, no full personal data.",
+  "type": "object", "additionalProperties": false,
+  "required": ["tenantId", "claimId", "timestamp", "actor", "outcome", "policyId", "policyVersion", "packVersion", "thresholds", "checksPassed", "checksFailed", "riskSignals", "informationalFlags"],
+  "properties": {
+    "tenantId": { "type": "string" },
+    "claimId": { "type": "string" },
+    "requestId": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "actor": { "type": "object", "additionalProperties": false, "required": ["type", "id"], "properties": { "type": { "enum": ["agent", "adjuster", "system"] }, "id": { "type": "string", "maxLength": 80 } } },
+    "outcome": { "enum": ["AUTO_APPROVED", "ROUTED_TO_ADJUSTER", "APPROVED_BY_ADJUSTER", "REJECTED_BY_ADJUSTER"] },
+    "policyId": { "type": "string" },
+    "policyVersion": { "type": "integer", "minimum": 1 },
+    "packVersion": { "type": "integer", "minimum": 1 },
+    "thresholds": { "type": "object", "description": "Values in force, e.g. autoApproveCap, earlyClaimDays, autoApproveEnabled.", "additionalProperties": { "type": ["number", "boolean", "string"] } },
+    "checksPassed": { "type": "array", "items": { "type": "string" } },
+    "checksFailed": { "type": "array", "items": { "type": "string" } },
+    "riskSignals": { "type": "array", "items": { "type": "string" } },
+    "informationalFlags": { "type": "array", "items": { "type": "string" } },
+    "amountClaimed": { "type": "number" },
+    "payout": { "type": "number" },
+    "reasonCode": { "type": "string" },
+    "model": { "type": "string" },
+    "promptVersion": { "type": "string" },
+    "ticketJti": { "type": "string" } }
+}

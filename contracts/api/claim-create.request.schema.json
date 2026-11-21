@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "POST /claims request",
+  "type": "object", "additionalProperties": false,
+  "required": ["clientRequestId", "policyId", "itemId", "cause", "description", "amountClaimed", "lossDate", "evidenceIds"],
+  "properties": {
+    "clientRequestId": { "type": "string", "format": "uuid" },
+    "policyId": { "type": "string", "pattern": "^POL-[A-Za-z0-9-]{1,40}$" },
+    "itemId": { "type": "string", "minLength": 1, "maxLength": 40 },
+    "cause": { "enum": ["ACCIDENTAL_DAMAGE", "THEFT", "LOSS", "WINDSCREEN", "COSMETIC", "COLLISION", "INJURY", "THIRD_PARTY", "TOTAL_LOSS"] },
+    "description": { "type": "string", "minLength": 1, "maxLength": 1000 },
+    "amountClaimed": { "type": "number", "exclusiveMinimum": 0, "maximum": 1000000, "multipleOf": 0.01 },
+    "lossDate": { "type": "string", "format": "date" },
+    "evidenceIds": { "type": "array", "maxItems": 6, "uniqueItems": true, "items": { "type": "string", "pattern": "^EVD-[A-Za-z0-9-]{1,40}$" } } }
+}

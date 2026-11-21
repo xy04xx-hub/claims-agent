@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "lookup_policy output",
+  "type": "object", "additionalProperties": false,
+  "required": ["found", "covered", "checks"],
+  "properties": {
+    "found": { "type": "boolean" },
+    "policyId": { "type": "string" }, "policyVersion": { "type": "integer", "minimum": 1 },
+    "covered": { "type": "boolean" },
+    "category": { "type": "string" },
+    "deductible": { "type": "number", "minimum": 0 },
+    "autoApproveCap": { "type": "number", "minimum": 0 },
+    "requiredEvidence": { "type": "array", "items": { "type": "string" } },
+    "insuredIdentifiers": { "type": "object", "additionalProperties": false, "properties": { "holderName": { "type": "string" }, "imei": { "type": "string" }, "plate": { "type": "string" } } },
+    "checks": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["code", "passed"], "properties": { "code": { "type": "string" }, "passed": { "type": "boolean" }, "detail": { "type": "string", "maxLength": 300 } } } } }
+}

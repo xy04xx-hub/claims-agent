@@ -1,0 +1,5 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "check_fraud_signals input. Empty: the tool reads the claim and its evidence by the injected claimId.",
+  "type": "object", "additionalProperties": false, "properties": {}
+}

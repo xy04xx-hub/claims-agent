@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "POST /claims/{claimId}/resolution response",
+  "type": "object", "additionalProperties": false, "required": ["claimId", "status"],
+  "properties": { "claimId": { "type": "string" }, "status": { "enum": ["APPROVED_BY_ADJUSTER", "REJECTED_BY_ADJUSTER"] } }
+}

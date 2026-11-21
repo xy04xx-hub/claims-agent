@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Decision Lambda result. Code decides. Auto-approval needs no risk signals and payout within cap.",
+  "type": "object", "additionalProperties": false,
+  "required": ["claimId", "outcome", "checksPassed", "checksFailed", "riskSignals", "informationalFlags", "reasons", "payout"],
+  "properties": {
+    "claimId": { "type": "string", "pattern": "^CLM-[A-Za-z0-9-]{1,40}$" },
+    "outcome": { "enum": ["AUTO_APPROVED", "ROUTED_TO_ADJUSTER"] },
+    "checksPassed": { "type": "array", "items": { "type": "string" } },
+    "checksFailed": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["code", "detail"], "properties": { "code": { "type": "string" }, "detail": { "type": "string", "maxLength": 300 } } } },
+    "riskSignals": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["code", "detail"], "properties": { "code": { "type": "string" }, "detail": { "type": "string", "maxLength": 300 }, "relatedClaimId": { "type": "string" } } } },
+    "informationalFlags": { "type": "array", "items": { "enum": ["DOC_AUTHENTICITY_UNVERIFIED", "EXIF_MISSING"] } },
+    "reasons": { "type": "object", "additionalProperties": false, "required": ["customer", "adjuster"], "properties": {
+      "customer": { "type": "string", "maxLength": 500 },
+      "adjuster": { "type": "array", "items": { "type": "string", "maxLength": 300 } } } },
+    "payout": { "type": "number", "minimum": 0 },
+    "failSafe": { "type": "boolean" } },
+  "if": { "properties": { "outcome": { "const": "AUTO_APPROVED" } } },
+  "then": { "properties": { "checksFailed": { "maxItems": 0 }, "riskSignals": { "maxItems": 0 } } },
+  "else": { "properties": { "payout": { "const": 0 } } }
+}

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "check_fraud_signals output",
+  "type": "object", "additionalProperties": false, "required": ["signals"],
+  "properties": { "signals": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["code", "detail"], "properties": {
+    "code": { "enum": ["DUPLICATE_PHOTO", "IDENTIFIER_REUSE", "EARLY_CLAIM", "AMOUNT_OUTLIER", "CLAIM_FREQUENCY", "TIMELINE_INCONSISTENT", "UNABLE_TO_VERIFY"] },
+    "detail": { "type": "string", "maxLength": 300 },
+    "relatedClaimId": { "type": "string" } } } } }
+}

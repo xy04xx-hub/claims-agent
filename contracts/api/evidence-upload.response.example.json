@@ -1,0 +1,1 @@
+{ "uploads": [ { "evidenceId": "EVD-7f3a9c", "url": "https://claims-evidence.s3.amazonaws.com/", "fields": { "key": "t1/cust-1/EVD-7f3a9c", "Content-Type": "image/jpeg", "policy": "<base64>", "x-amz-signature": "<sig>" }, "expiresAt": "2026-11-21T10:05:00Z" } ] }

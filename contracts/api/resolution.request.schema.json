@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "POST /claims/{claimId}/resolution request",
+  "type": "object", "additionalProperties": false, "required": ["decision", "reasonCode", "note"],
+  "properties": {
+    "decision": { "enum": ["APPROVE", "REJECT"] },
+    "reasonCode": { "enum": ["VERIFIED_OK", "NOT_COVERED", "EVIDENCE_INVALID", "SUSPECTED_FRAUD", "OTHER"] },
+    "note": { "type": "string", "maxLength": 1000 } }
+}

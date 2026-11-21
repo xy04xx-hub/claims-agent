@@ -1,0 +1,1 @@
+{ "found": true, "policyId": "POL-001", "policyVersion": 3, "covered": true, "category": "phone", "deductible": 50, "autoApproveCap": 500, "requiredEvidence": ["DEVICE_PHOTO"], "insuredIdentifiers": { "holderName": "Alex Demo", "imei": "356938035643809" }, "checks": [ { "code": "POLICY_ACTIVE", "passed": true }, { "code": "CAUSE_COVERED", "passed": true } ] }
