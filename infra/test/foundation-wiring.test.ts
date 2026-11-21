@@ -5,11 +5,20 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as cdk from 'aws-cdk-lib';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import { describe, expect, expectTypeOf, it } from 'vitest';
+import { afterAll, describe, expect, expectTypeOf, it } from 'vitest';
 import { CI_PLACEHOLDER_ACCOUNT } from '../lib/stage.js';
 import { loadStageConfig, resolveRemovalPolicy } from '../lib/stage-config.js';
 import type { BaseStackProps } from '../lib/stack-props.js';
 import { FoundationStack, type FoundationResources } from '../lib/stacks/foundation-stack.js';
+
+const tmpDirs: string[] = [];
+const trackTmp = (dir: string): string => {
+  tmpDirs.push(dir);
+  return dir;
+};
+afterAll(() => {
+  for (const dir of tmpDirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+});
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const CONFIG_DIR = path.resolve(HERE, '../config');
@@ -26,7 +35,7 @@ function makeProps(stage: string): BaseStackProps {
 }
 
 function newApp(): cdk.App {
-  return new cdk.App({ outdir: fs.mkdtempSync(path.join(fs.realpathSync('/tmp'), 'cdk-test-')) });
+  return new cdk.App({ outdir: trackTmp(fs.mkdtempSync(path.join(fs.realpathSync('/tmp'), 'cdk-test-'))) });
 }
 
 describe('foundation wiring', () => {

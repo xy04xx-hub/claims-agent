@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import { buildApp as buildStacks } from '../lib/build-app.js';
 import { applyNag } from '../lib/nag.js';
 import { AgentStack } from '../lib/stacks/agent-stack.js';
@@ -18,6 +18,15 @@ import { WebStack } from '../lib/stacks/web-stack.js';
 import { CI_PLACEHOLDER_ACCOUNT } from '../lib/stage.js';
 import { loadStageConfig, resolveRemovalPolicy } from '../lib/stage-config.js';
 import type { BaseStackProps } from '../lib/stack-props.js';
+
+const tmpDirs: string[] = [];
+const trackTmp = (dir: string): string => {
+  tmpDirs.push(dir);
+  return dir;
+};
+afterAll(() => {
+  for (const dir of tmpDirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+});
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const CONFIG_DIR = path.resolve(HERE, '../config');
@@ -49,7 +58,7 @@ const DENY_LIST = [
 ];
 
 function buildApp(stage: string, removalPolicy?: cdk.RemovalPolicy) {
-  const app = new cdk.App({ outdir: fs.mkdtempSync(path.join(fs.realpathSync('/tmp'), 'cdk-test-')) });
+  const app = new cdk.App({ outdir: trackTmp(fs.mkdtempSync(path.join(fs.realpathSync('/tmp'), 'cdk-test-'))) });
   const config = loadStageConfig(stage, CONFIG_DIR, () => undefined);
   const resolved = removalPolicy ?? cdk.RemovalPolicy[resolveRemovalPolicy(stage, config)];
   const props: BaseStackProps = {
@@ -83,8 +92,12 @@ describe('dev-a synth', () => {
     expect(assembly.stacks).toHaveLength(7);
     for (const st of assembly.stacks) {
       const types = Object.values((st.template.Resources ?? {}) as Record<string, { Type: string }>).map((r) => r.Type);
-      // Foundation (T-05) holds the data resources and Processing (T-14) the Decision Lambda; the other five hold only metadata.
-      if (!st.stackName.endsWith('-Foundation') && !st.stackName.endsWith('-Processing')) {
+      // Foundation (T-05), Web (T-07) and Processing (T-14) hold resources; the other four hold only metadata.
+      if (
+        !st.stackName.endsWith('-Foundation') &&
+        !st.stackName.endsWith('-Web') &&
+        !st.stackName.endsWith('-Processing')
+      ) {
         const bad = types.filter((t) => DENY_LIST.includes(t));
         expect(bad, `${st.stackName} has deny-listed resources`).toEqual([]);
         const extra = types.filter((t) => t !== 'AWS::CDK::Metadata');
@@ -96,7 +109,7 @@ describe('dev-a synth', () => {
     }
   });
 
-  it('records only the known acknowledgments: Foundation S1 and the Processing decision function IAM5 (X-Ray) and L1 (Node 22)', () => {
+  it('records only the known Foundation, Web and Processing acknowledgments', () => {
     const { app } = buildApp('dev-a');
     const found: Array<{ path: string; ids: string[] }> = [];
     for (const c of app.node.findAll()) {
@@ -105,17 +118,30 @@ describe('dev-a synth', () => {
         found.push({ path: c.node.path, ids: Object.keys((m.data ?? {}) as Record<string, unknown>) });
       }
     }
-    expect(found).toEqual([
-      { path: 'Foundation/EvidenceBucket', ids: ['Annotation::AwsSolutions-S1'] },
-      { path: 'Processing/decision', ids: ['Annotation::AwsSolutions-IAM5'] },
-      { path: 'Processing/decision', ids: ['Annotation::AwsSolutions-L1'] },
-    ]);
+    const flat = found
+      .flatMap((f) => f.ids.map((id) => `${f.path} ${id.replace('Annotation::AwsSolutions-', '')}`))
+      .sort();
+    const handler = 'Web/Custom::CDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C';
+    const expected = [
+      'Foundation/EvidenceBucket S1',
+      'Web/ConsoleBucket S1',
+      'Web/Distribution CFR1',
+      'Web/Distribution CFR2',
+      'Web/Distribution CFR3',
+      'Web/Distribution CFR4',
+      `${handler} L1`,
+      `${handler}/ServiceRole IAM4`,
+      `${handler}/ServiceRole/DefaultPolicy IAM5`,
+      'Processing/decision IAM5',
+      'Processing/decision L1',
+    ].sort();
+    expect(flat).toEqual(expected);
   });
 });
 
 describe('nag failure reporting', () => {
   function badApp(opts: { publicBucket?: boolean; ackReason?: string }) {
-    const app = new cdk.App({ outdir: fs.mkdtempSync(path.join(fs.realpathSync('/tmp'), 'cdk-test-')) });
+    const app = new cdk.App({ outdir: trackTmp(fs.mkdtempSync(path.join(fs.realpathSync('/tmp'), 'cdk-test-'))) });
     const stack = new cdk.Stack(app, 'Bad', { env: { account: CI_PLACEHOLDER_ACCOUNT, region: 'us-east-1' } });
     if (opts.publicBucket) {
       new s3.Bucket(stack, 'PublicBucket', { publicReadAccess: true, blockPublicAccess: s3.BlockPublicAccess.BLOCK_ACLS_ONLY });

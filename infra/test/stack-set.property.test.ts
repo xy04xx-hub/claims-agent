@@ -22,28 +22,35 @@ describe('Property 2: stack set', () => {
   it('builds exactly seven stacks, named, in us-east-1, tagged', () => {
     fc.assert(
       fc.property(stageArb, accountArb, (stage, account) => {
-        const app = new cdk.App();
-        buildApp(app, {
-          stage,
-          config,
-          removalPolicy: cdk.RemovalPolicy.DESTROY,
-          env: { account, region: 'us-east-1' },
-        });
-        app.synth(); // tags are applied by aspects during synthesis
-        const stacks = app.node.children.filter(cdk.Stack.isStack) as cdk.Stack[];
-        expect(stacks.map((s) => s.stackName).sort()).toEqual(
-          STACK_NAMES.map((n) => stackName(stage, n)).sort(),
-        );
-        for (const s of stacks) {
-          expect(s.region).toBe('us-east-1');
-          expect(s.account).toBe(account);
-          const tags = s.tags.tagValues();
-          expect(tags.project).toBe('claims-agent');
-          expect(tags.stage).toBe(stage);
+        // Each full synth copies the 22 MB CLI layer asset into its outdir, so use a private
+        // outdir and remove it, or 100 runs fill /tmp.
+        const outdir = fs.mkdtempSync(path.join(fs.realpathSync('/tmp'), 'cdk-test-'));
+        try {
+          const app = new cdk.App({ outdir });
+          buildApp(app, {
+            stage,
+            config,
+            removalPolicy: cdk.RemovalPolicy.DESTROY,
+            env: { account, region: 'us-east-1' },
+          });
+          app.synth(); // tags are applied by aspects during synthesis
+          const stacks = app.node.children.filter(cdk.Stack.isStack) as cdk.Stack[];
+          expect(stacks.map((s) => s.stackName).sort()).toEqual(
+            STACK_NAMES.map((n) => stackName(stage, n)).sort(),
+          );
+          for (const s of stacks) {
+            expect(s.region).toBe('us-east-1');
+            expect(s.account).toBe(account);
+            const tags = s.tags.tagValues();
+            expect(tags.project).toBe('claims-agent');
+            expect(tags.stage).toBe(stage);
+          }
+        } finally {
+          fs.rmSync(outdir, { recursive: true, force: true });
         }
       }),
       { numRuns: 100 },
     );
     // Foundation synth is heavy; 100 full synths exceed the 5 s default.
-  }, 60_000);
+  }, 300_000);
 });

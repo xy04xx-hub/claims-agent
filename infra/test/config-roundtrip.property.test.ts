@@ -33,6 +33,9 @@ const base = fc.record({
   workerTimeoutSeconds: positive,
   sqsMaxReceiveCount: positive,
   evidenceRetentionDays: fc.integer({ min: 1, max: 3650 }),
+  cspApiOrigins: fc.constant<string[]>(['https://*.execute-api.us-east-1.amazonaws.com']),
+  cspCognitoOrigins: fc.constant<string[]>(['https://cognito-idp.us-east-1.amazonaws.com', 'https://*.amazoncognito.com']),
+  cspEvidenceOrigins: fc.constant<string[]>(['https://*.s3.us-east-1.amazonaws.com']),
   consoleOrigins: fc.array(
     fc.constantFrom('http://localhost:5173', 'http://localhost', 'https://example.com', 'https://d111abc.cloudfront.net'),
     { minLength: 1, maxLength: 5 },

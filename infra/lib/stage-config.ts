@@ -22,6 +22,9 @@ export interface StageConfig {
   sqsMaxReceiveCount: number;
   evidenceRetentionDays: number;
   consoleOrigins: string[];
+  cspApiOrigins: string[];
+  cspCognitoOrigins: string[];
+  cspEvidenceOrigins: string[];
   earlyClaimDays: number;
   frequencyWindowDays: number;
   frequencyMaxClaims: number;
@@ -65,6 +68,19 @@ export function isValidConsoleOrigin(origin: unknown): boolean {
   if (host.length > 253 || !ORIGIN_HOST.test(host)) return false;
   if (port !== undefined && (Number(port) < 1 || Number(port) > 65535)) return false;
   return scheme === 'https' ? true : host === 'localhost';
+}
+const CSP_KEYS = ['cspApiOrigins', 'cspCognitoOrigins', 'cspEvidenceOrigins'] as const;
+const MAX_CSP_ORIGINS = 4;
+const CSP_SOURCE = /^https:\/\/(\*\.(?=[a-z0-9-]+\.[a-z0-9-]+))?([a-z0-9]([a-z0-9-]*[a-z0-9])?)(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/;
+/** True for `https://<dns name>` with optional single leading `*.` label followed by at least two labels. */
+export function isValidCspSource(source: unknown): boolean {
+  if (typeof source !== 'string') return false;
+  if (!CSP_SOURCE.test(source)) return false;
+  const host = source.slice('https://'.length);
+  const bare = host.startsWith('*.') ? host.slice(2) : host;
+  if (bare.length > 253) return false;
+  // A wildcard needs two further labels (checked by the lookahead); a plain host needs no minimum.
+  return true;
 }
 /** Error that names the config file and the offending key (or parse position). */
 export class ConfigError extends Error {
@@ -136,6 +152,25 @@ export function validateStageConfig(value: unknown, file: string): StageConfig {
       );
     }
   });
+  for (const key of CSP_KEYS) {
+    const list = value[key];
+    if (!Array.isArray(list) || list.length < 1 || list.length > MAX_CSP_ORIGINS) {
+      throw new ConfigError(
+        file,
+        key,
+        `must be an array of 1 to ${MAX_CSP_ORIGINS} CSP sources`,
+      );
+    }
+    list.forEach((o, i) => {
+      if (!isValidCspSource(o)) {
+        throw new ConfigError(
+          file,
+          `${key}[${i}]`,
+          'must be https://<host>, optionally with one leading *. label and at least two labels after it, with no path, port or keyword',
+        );
+      }
+    });
+  }
   const rp = value.removalPolicy;
   if (rp !== undefined && !REMOVAL_POLICIES.includes(rp as RemovalPolicyName)) {
     throw new ConfigError(

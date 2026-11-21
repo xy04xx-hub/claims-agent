@@ -23,6 +23,9 @@ const baseConfig: Cfg = {
   jobTicketTtlSeconds: 60,
   workerTimeoutSeconds: 60,
   sqsMaxReceiveCount: 3,
+  cspApiOrigins: ['https://*.execute-api.us-east-1.amazonaws.com'],
+  cspCognitoOrigins: ['https://cognito-idp.us-east-1.amazonaws.com', 'https://*.amazoncognito.com'],
+  cspEvidenceOrigins: ['https://*.s3.us-east-1.amazonaws.com'],
 };
 
 const validConfigArb: fc.Arbitrary<Cfg> = fc

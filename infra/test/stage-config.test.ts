@@ -1,8 +1,17 @@
-import { describe, expect, it } from 'vitest';
-import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { afterAll, describe, expect, it } from 'vitest';
+import { mkdtempSync, rmSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { ConfigError, loadStageConfig } from '../lib/stage-config.js';
+
+const tmpDirs: string[] = [];
+const trackTmp = (dir: string): string => {
+  tmpDirs.push(dir);
+  return dir;
+};
+afterAll(() => {
+  for (const dir of tmpDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+});
 // Validates: Requirements 7.1, 7.2, 7.3, 7.4, 7.5, 7.6
 
 const CONFIG_DIR = resolve(__dirname, '../config');
@@ -10,7 +19,7 @@ const defaultJson = (): Record<string, unknown> =>
   JSON.parse(readFileSync(join(CONFIG_DIR, 'default.json'), 'utf8'));
 
 function tempDir(files: Record<string, string>): string {
-  const dir = mkdtempSync(join(tmpdir(), 'stage-config-'));
+  const dir = trackTmp(mkdtempSync(join(tmpdir(), 'stage-config-')));
   for (const [name, content] of Object.entries(files)) writeFileSync(join(dir, name), content);
   return dir;
 }
@@ -65,6 +74,7 @@ describe('shipped config files', () => {
     expect(cfg.maxTokens).toBeGreaterThan(0);
     expect(cfg.evidenceRetentionDays).toBe(90);
     expect(cfg.consoleOrigins).toEqual(['http://localhost:5173']);
+    expect(cfg.cspApiOrigins).toEqual(['https://*.execute-api.us-east-1.amazonaws.com']);
     expect(cfg.earlyClaimDays).toBe(14);
     expect(cfg.frequencyWindowDays).toBe(30);
     expect(cfg.frequencyMaxClaims).toBe(3);
