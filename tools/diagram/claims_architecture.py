@@ -39,8 +39,8 @@ icon('worker',626,SP,'Worker','lambda','comp','backend')
 icon('dlq',518,RC,'SQS DLQ','sqs','integ','backend')
 icon('decision',626,RC,'Decision Lambda\napprove / route','lambda','comp','backend')
 icon('ddb',770,TOP,'DynamoDB (on-demand)\nPolicies, Claims, EvidenceIndex,\nClaimTypePacks, AuditLog','dynamodb','db','acct','top')
-icon('gateway',748,250,'Gateway\nMCP, JWT auth','bedrock_agentcore','ml','agentcore')
-icon('interceptor',860,250,'Interceptor\nclaim scope','lambda','comp','agentcore')
+icon('gateway',748,250,'Gateway\nMCP, IAM auth','bedrock_agentcore','ml','agentcore')
+icon('interceptor',860,250,'Interceptor\nverify ticket','lambda','comp','agentcore')
 icon('runtime',748,SP,'Runtime\nagent','bedrock_agentcore','ml','agentcore')
 icon('obs',748,RC,'AgentCore\nObservability','bedrock_agentcore','ml','agentcore')
 icon('claude',986,245,'Claude Haiku 5.5\nvision, tool use','bedrock','ml','bedrock')
@@ -50,7 +50,7 @@ icon('t2',862,BY,'check_fraud_\nsignals','lambda','comp','tools')
 icon('t3',974,BY,'verify_evidence','lambda','comp','tools')
 icon('cw',240,BY,'CloudWatch\nlogs, metrics','cloudwatch_2','mgmt','secops')
 icon('ct',335,BY,'CloudTrail\nAPI audit','cloudtrail','mgmt','secops')
-icon('kms',430,BY,'KMS\nencryption key','key_management_service','sec','secops')
+icon('kms',430,BY,'KMS\ndata, ticket keys','key_management_service','sec','secops')
 icon('iam',525,BY,'IAM roles\nper Lambda','identity_and_access_management','sec','secops')
 icon('ssm',620,BY,'SSM Parameters\nkill switch','systems_manager','mgmt','secops')
 # ---- edges (absolute waypoints) ----
@@ -72,7 +72,7 @@ edge('e14','worker','runtime',[(650,SP),(724,SP)],'4',lx=-0.5)
 edge('e15','worker','decision',[(626,SP+H),(626,RC-H)],'7 decide')
 edge('e16','runtime','gateway',[(748,SP-H),(748,250+H)],'5 MCP')
 edge('e17','gateway','interceptor',[(772,250),(836,250)],'auth')
-edge('e18','interceptor','ddb',[(860,250-H),(860,TOP),(794,TOP)],'scope')
+edge('e18','interceptor','ddb',[(860,250-H),(860,TOP),(794,TOP)],'status')
 edge('e19','runtime','claude',[(772,SP),(918,SP),(918,245),(962,245)],'6 Converse,\nApplyGuardrail',lx=-0.4)
 edge('e20','runtime','guard',[(772,SP),(918,SP),(918,401),(962,401)])
 edge('e21','runtime','obs',[(748,SP+H),(748,RC-H)],'traces',dashed=True)
@@ -99,7 +99,7 @@ if '--write' in sys.argv:
      f'<mxCell id="lg_at" value="request / sync call" style="text;html=1;align=left;verticalAlign=middle;{T}" vertex="1" parent="1"><mxGeometry x="276" y="{LY-10}" width="110" height="20" as="geometry"/></mxCell>',
      f'<mxCell id="lg_b" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#232F3E;strokeWidth=1.5;dashed=1;dashPattern=6 4;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="396" y="{LY}" as="sourcePoint"/><mxPoint x="446" y="{LY}" as="targetPoint"/></mxGeometry></mxCell>',
      f'<mxCell id="lg_bt" value="async / traces / fail-safe" style="text;html=1;align=left;verticalAlign=middle;{T}" vertex="1" parent="1"><mxGeometry x="452" y="{LY-10}" width="150" height="20" as="geometry"/></mxCell>',
-     f'<mxCell id="lg_c" value="1-7 claim steps. One least-privilege IAM role per Lambda. Only the Decision Lambda writes AUTO_APPROVED or ROUTED_TO_ADJUSTER; the agent is read-only. Not drawn (pilot): VPC endpoints, WAF, Fargate worker, CloudWatch Omni." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;{T}" vertex="1" parent="1"><mxGeometry x="165" y="{LY+12}" width="910" height="32" as="geometry"/></mxCell>']
+     f'<mxCell id="lg_c" value="1-7 claim steps. One least-privilege IAM role per Lambda. Only the Decision Lambda writes AUTO_APPROVED or ROUTED_TO_ADJUSTER; the agent is read-only. Tool calls: IAM auth plus a KMS-signed ticket for one claim; user tokens stop at API Gateway. Not drawn (pilot): VPC endpoints, WAF, Fargate worker, CloudWatch Omni." style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;{T}" vertex="1" parent="1"><mxGeometry x="165" y="{LY+12}" width="910" height="32" as="geometry"/></mxCell>']
     W=1080; Hh=LY+50
     xml=(f'<mxfile host="app.diagrams.net" version="24.0.0"><diagram id="claims-arch" name="Instant Claims Agent"><mxGraphModel dx="{W}" dy="{Hh}" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="{W}" pageHeight="{Hh}" math="0" shadow="0"><root><mxCell id="0"/><mxCell id="1" parent="0"/>\n'
       +'\n'.join(body+legend)+'\n</root></mxGraphModel></diagram></mxfile>\n')

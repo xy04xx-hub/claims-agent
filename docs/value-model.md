@@ -39,7 +39,7 @@ A mid-size device, renters or travel insurer with 100,000 claims a year. **Input
 | Adjuster time saved | $175,000 | $666,667 | hours x hourly cost |
 | Fraud paid out and avoided | $125,000 | $420,000 | claims x flagged share x confirmed share x average fraud amount |
 | **Total benefit** | **$300,000** | **$1,086,667** | sum |
-| Platform cost (pilot volume) | about $600 | about $600 | `docs/cost-estimate.md`, about $49 a month |
+| Platform cost (pilot volume) | about $600 | about $600 | `docs/cost-estimate.md`, about $50 a month |
 
 Cost of one manually handled small claim in the base case: 25 min x $40/h = $16.67. The agent's variable cost is about $0.002 per claim.
 

@@ -38,21 +38,22 @@ Caching saves about a third of model cost and shortens the second turn. At the U
 | SQS | 3 requests at $0.40 per 1M (**list price, not re-fetched**) | $0.000001 |
 | DynamoDB on-demand | 12 write units at $0.625 per 1M, 25 read units at $0.125 per 1M | $0.000011 |
 | S3 requests | 3 PUT, 6 GET | $0.000017 |
-| **Total variable** | | **about $0.0022** |
+| KMS ticket signing | 1 asymmetric (ECC) `Sign` per attempt at $0.15 per 10K; verification is local with the cached public key | $0.000015 |
+| **Total variable** | | **about $0.0023** |
 | S3 storage | about 4.5 MB per claim at $0.023 per GB-month | $0.0001 per claim-month retained |
 
 The assumption of $0.05 per claim in the earlier value model was about 20 times too high. The value model now uses this figure.
 
 ## 3. Monthly estimate by scenario
 
-Fixed items: one KMS key $1.00, about 8 CloudWatch alarms at $0.10, about 10 custom metrics at $0.30. CloudFront, S3 for the console, CloudTrail management events and SSM standard parameters are negligible or free at this size. Cognito at $0.015 per monthly active user is shown without any free tier, so the true figure may be lower.
+Fixed items: two KMS keys $2.00 (data key and ticket-signing key), about 8 CloudWatch alarms at $0.10, about 10 custom metrics at $0.30. CloudFront, S3 for the console, CloudTrail management events and SSM standard parameters are negligible or free at this size. Cognito at $0.015 per monthly active user is shown without any free tier, so the true figure may be lower.
 
 | | Demo (500 claims, 20 users) | Pilot (8,333 claims, about 100,000 a year, 1,500 users) | Scale (100,000 claims, 15,000 users) |
 |---|---|---|---|
-| Variable (incl. 3 months of storage) | $1.27 | $21.23 | $254.83 |
-| Fixed | $4.80 | $4.80 | $4.80 |
+| Variable (incl. 3 months of storage) | $1.28 | $21.36 | $256.33 |
+| Fixed | $5.80 | $5.80 | $5.80 |
 | Cognito | $0.30 | $22.50 | $225.00 |
-| **Total per month** | **about $6** | **about $49** | **about $485** |
+| **Total per month** | **about $7** | **about $50** | **about $487** |
 
 Cost per claim at pilot volume is about $0.006 including Cognito and fixed items. At scale Cognito is the largest single line, which is a reason to review the user model (for example Cognito's lower-cost tiers) before scaling.
 

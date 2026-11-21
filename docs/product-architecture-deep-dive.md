@@ -113,7 +113,7 @@ These are the design decisions that deepen the baseline in `architecture.md`, in
 ### 5.1 Investigator agent proposes, code decides (decided: option C)
 
 1. The **Worker Lambda** takes a claim from SQS, loads the claim and the normalized evidence from S3, and invokes the **Investigator agent on AgentCore Runtime** (Bedrock Converse tool use, Claude Haiku 5.5).
-2. The agent calls **read-only tools through AgentCore Gateway** in parallel: `lookup_policy`, `check_fraud_signals`, `verify_evidence`. An **Interceptor Lambda** on the Gateway rejects any call whose claim or tenant does not match the job. Tools take a `claimId`, never a customer ID, so a prompt-injected agent cannot read someone else's data.
+2. The agent calls **read-only tools through AgentCore Gateway** in parallel: `lookup_policy`, `check_fraud_signals`, `verify_evidence`. The Runtime authenticates to the gateway with its own IAM role (no user token is ever forwarded). The Worker gives the agent a **KMS-signed job ticket** for this one claim, and the runtime code attaches it to every MCP call. The **Interceptor Lambda** verifies the ticket and writes the claim and tenant into each tool call, so a prompt-injected agent cannot read anyone else's data. See "Credentials and tokens" in `architecture.md`.
 3. The agent returns a schema-validated **proposal**: extracted fields (item, cause from the fixed list, amount, loss date, identifiers), an evidence assessment with confidence, and a draft explanation.
 4. The Worker then calls the **Decision Lambda** (`approve_within_limit` or `route_to_adjuster`). It is not exposed to the model. It re-fetches the policy, pack, signals and identifiers and does not trust the proposal's statements about data.
 
@@ -238,7 +238,7 @@ Matches the script in `product.md`:
 |---|---|---|
 | 1 | Agent design | **Option C.** Investigator agent on AgentCore Runtime, read-only tools through AgentCore Gateway with an Interceptor, decision in code outside the agent. Fixed pipeline is the fallback if latency is too high. |
 | 2 | Async submit | **SQS with a DLQ.** 202 and polling. The DLQ routes the claim to an adjuster. |
-| 3 | Tools | Read-only tools via Gateway. The Decision Lambda is private and holds the only decision-write permission. |
+| 3 | Tools | Read-only tools via Gateway with IAM inbound auth and a signed job ticket per claim. No token passthrough. The Decision Lambda is private and holds the only decision-write permission. |
 | 4 | Event bus | Deferred to the pilot. |
 | 5 | Tenancy | `tenantId` in all keys, from the JWT. Sharded queue index. One tenant for the MVP. |
 | 6 | Thresholds | SSM for the kill switch and global defaults. Caps per category and cause in claim type packs. Values copied into the audit record. |

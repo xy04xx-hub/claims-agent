@@ -10,7 +10,8 @@ Rationale, journeys, value numbers and the MVP/pilot/scale plan are in `docs/pro
 Browser (React console)
   -> CloudFront (HTTPS only) -> private S3 (console, via OAC)
   -> Cognito (groups Customer, Adjuster; custom:tenantId)
-  -> API Gateway HTTP API (JWT authorizer on every route) -> API Lambda
+  -> API Gateway HTTP API (JWT authorizer on every route, Cognito access tokens only) -> API Lambda
+     The user's token stops here. It never enters SQS, the Worker, the agent or the MCP gateway.
 
 1  POST /evidence/uploads   -> API Lambda returns presigned POST URLs (type and size limited)
    browser uploads photos and documents DIRECTLY to private S3 (evidence). Image bytes never pass through the API.
@@ -18,8 +19,12 @@ Browser (React console)
 2  POST /claims (JSON metadata + evidenceIds, 202) -> API Lambda validates, writes claim PROCESSING, sends a job to SQS
 3  SQS job queue (max receive 3) -> Worker Lambda (one claim per invocation, concurrency capped)
    Worker reads the claim from DynamoDB and the normalized evidence from S3
-4  Worker invokes the Investigator agent (AgentCore Runtime) with the claim and evidence
-5  Agent calls READ-ONLY tools through AgentCore Gateway (MCP). An Interceptor Lambda checks that every call is scoped to this claim and tenant.
+4  Worker signs a job ticket {claimId, tenantId, attempt, exp about 60 s} with a KMS asymmetric key and invokes the
+   Investigator agent (AgentCore Runtime, IAM SigV4) with the claim, the evidence and the ticket
+5  Agent calls READ-ONLY tools through AgentCore Gateway (MCP). Inbound auth is IAM SigV4 with the Runtime's own role,
+   never a user token. The runtime code (not the model) attaches the ticket as a header on every MCP call.
+   The Interceptor Lambda verifies the ticket, checks the claim is still PROCESSING, and writes claimId and tenantId
+   into the tool request. Tools never take a claim or customer ID from the model.
    Tools: lookup_policy, check_fraud_signals, verify_evidence (Lambdas, DynamoDB read-only)
 6  Agent calls Bedrock (Claude Haiku 5.5, Converse) with Guardrails applied to untrusted text, returns a structured proposal
 7  Worker calls the Decision Lambda (approve_within_limit or route_to_adjuster). It re-fetches everything and writes the outcome + audit record.
@@ -39,15 +44,15 @@ Ops: CloudWatch (logs, metrics, dashboard), AgentCore Observability (traces), Cl
 | S3 evidence bucket | Photos and documents. Private, Block Public Access, `enforceSSL`, KMS, lifecycle retention. Key prefix `tenantId/customerId/evidenceId`. |
 | Evidence Processor Lambda | On upload: SHA-256, perceptual hash, EXIF, a normalized JPEG at most 3.5 MB for the model (Bedrock image limits apply). Writes `EvidenceIndex`. |
 | SQS job queue + DLQ | Standard queue, SSE-KMS. Message holds IDs only (no personal data). Visibility timeout at least 6 times the Worker timeout. `maxReceiveCount` 3. Batch size 1, partial batch responses on, event source max concurrency capped to protect Bedrock quotas. DLQ retention 14 days with an alarm on depth above 0. |
-| Worker Lambda | Runs one claim: loads the claim and evidence, invokes the agent, calls the Decision Lambda. Timeout 60 s. Holds no decision-write permission. |
-| Investigator agent (AgentCore Runtime) | Bedrock Converse tool-use loop. Reads through Gateway tools. **No write tool and no write IAM permission. No access to S3.** The Worker passes in the evidence. |
-| AgentCore Gateway + Interceptor | Exposes the read-only tool Lambdas as MCP tools with JWT auth. The Interceptor Lambda rejects calls whose claim or tenant does not match the job scope, so a prompt-injected agent cannot read another customer's data. Tools accept a `claimId`, never a customer ID. |
+| Worker Lambda | Runs one claim: loads the claim and evidence, signs the job ticket (`kms:Sign` on the ticket key only), invokes the agent, calls the Decision Lambda. Timeout 60 s. Holds no decision-write permission. |
+| Investigator agent (AgentCore Runtime) | Bedrock Converse tool-use loop. Reads through Gateway tools. Its execution role allows `bedrock-agentcore:InvokeGateway` on this one gateway, Bedrock on the one model profile and guardrail, and nothing else. **No write tool, no write IAM permission, no S3 access, no signing permission.** The Worker passes in the evidence and the ticket. |
+| AgentCore Gateway + Interceptor | Exposes the read-only tool Lambdas as MCP tools. **Inbound: IAM (`AWS_IAM`), only the Runtime's role may invoke.** Outbound to Lambda targets: the gateway service role, limited to invoking the three tool functions. The REQUEST Interceptor (headers passed through) verifies the job ticket with the cached public key, rejects missing, expired, malformed or replayed tickets, checks the claim is `PROCESSING`, and injects `claimId` and `tenantId` into the tool arguments, overwriting anything the model sent. |
 | Read-only tool Lambdas | `lookup_policy` (plan, pack, version by loss date), `check_fraud_signals` (hash, identifier reuse, frequency, early claim, outlier), `verify_evidence` (compares extracted fields to the policy). |
 | Decision Lambda | Contains `approve_within_limit` and `route_to_adjuster`. **The only role allowed to write a decision status.** Re-fetches policy, pack, signals and identifiers itself. Reads the kill switch. Also triggered by the DLQ. |
 | Bedrock | Claude Haiku 5.5 (see Model choice). Guardrails (prompt-attack filter) on untrusted text. |
 | DynamoDB | On-demand, encrypted with KMS, PITR. All keys carry `tenantId`. |
 | CloudWatch, AgentCore Observability, CloudTrail | Structured logs, metrics, dashboard, alarms, model and tool traces, API audit. |
-| KMS | One customer-managed key for S3 evidence, DynamoDB and SQS. |
+| KMS | Two customer-managed keys: a symmetric data key for S3 evidence, DynamoDB and SQS, and an asymmetric ECC_NIST_P256 key that signs job tickets (`kms:Sign` for the Worker only, the Interceptor verifies locally with the public key). |
 | SSM Parameter Store | `autoApproveEnabled` kill switch and global defaults. |
 | CDK | All infrastructure. No manual console resources. |
 
@@ -68,6 +73,34 @@ All routes need a valid Cognito JWT. Role comes from `cognito:groups`, tenant fr
 | `GET /impact` | Adjuster | Auto-handle rate, latency, estimated hours and dollars saved. |
 
 **How claims and images arrive:** the API carries only small JSON (metadata and evidence IDs). Files go straight from the browser to S3 with presigned POST, which also enforces the size limit (a presigned PUT cannot). The Worker, not the API Lambda and not the agent, reads the files from S3. This avoids the API Gateway and Lambda payload limits and keeps image bytes out of logs and queues.
+
+## Credentials and tokens
+
+Rules for every hop:
+
+1. **A service accepts only credentials issued for it.** API Gateway accepts only Cognito access tokens from the console's app client. The MCP gateway accepts only IAM calls from the Runtime's role.
+2. **No token passthrough.** A received token is never forwarded to another service (the MCP specification forbids it). Each hop uses its own credential.
+3. **The user's token stops at API Gateway.** The API Lambda checks ownership at submit time. After that the system acts as itself on one claim. User tokens never go into SQS, logs, the agent or the MCP gateway.
+4. **The claim scope comes from a signed ticket, not from the model.** Tool calls are limited to one claim, one tenant, read-only, for about a minute.
+5. **Prefer IAM inside AWS.** No long-lived secrets to store or rotate. Use OAuth only where a caller sits outside AWS.
+
+| Hop | Credential | Scope |
+|---|---|---|
+| Browser → API Gateway | Cognito **access token** (not the ID token), checked by the JWT authorizer | Console app client. Role and tenant from verified claims only |
+| API Lambda → SQS, DynamoDB, S3 | IAM role | This queue, these tables, the evidence bucket prefix |
+| Worker → AgentCore Runtime | IAM SigV4 | Invoke this one runtime |
+| Worker → KMS | IAM role | `kms:Sign` on the ticket key |
+| Runtime → AgentCore Gateway (MCP) | IAM SigV4 with the Runtime execution role, plus the job ticket header | `bedrock-agentcore:InvokeGateway` on this gateway. Ticket binds the call to one claim and tenant |
+| Gateway → tool Lambdas | Gateway service role (the only option for Lambda targets) | `lambda:InvokeFunction` on the three tool functions |
+| Interceptor, tools → DynamoDB | Each function's own role | Read-only, specific tables |
+| Runtime → Bedrock | Execution role | Haiku 5.5 inference profile and the one guardrail |
+| Worker → Decision Lambda | IAM role | Invoke the Decision Lambda only |
+
+**Job ticket:** a compact JWS with `claimId`, `tenantId`, `attempt`, `iat` and `exp` (60 s), plus a unique `jti`. The Worker signs a new ticket for each attempt. The Interceptor rejects a ticket whose signature, expiry or claim status (not `PROCESSING`) fails, and records the `jti` in the audit log. Even a fully prompt-injected agent can then read only the claim it is already working on, and it can never write a decision.
+
+**Pilot: a user identity at the tools.** If an adjuster copilot calls tools live and the tools must know which adjuster is asking, use on-behalf-of token exchange (a new audience-scoped token carrying both the adjuster and the agent), never passthrough. AgentCore lists that grant for MCP-server and OpenAPI targets, not Lambda targets, so either move those tools behind such a target or keep IAM and put the adjuster's verified identity in the ticket.
+
+**Required tests** (with the approval-limit test): a tool call with a missing, expired, wrongly signed or other-claim ticket is rejected; a tool argument naming another claim is overwritten; a call to the gateway from any role other than the Runtime's is denied; a user access token sent to the MCP gateway is rejected.
 
 ## Model choice (decided with the judging criteria in mind)
 
@@ -201,7 +234,8 @@ SSM parameter `autoApproveEnabled`. When `false`, `approve_within_limit` refuses
 | Duplicate submit | `clientRequestId` returns the original result |
 | Hash or identifier lookup fails | Treated as a risk signal "unable to verify" |
 | Worker crashes mid-claim | SQS visibility timeout returns the job. The Decision Lambda uses a conditional write, so a claim is decided once |
-| Prompt injection in claim text or documents | Input is delimited data, text passes Guardrails, outputs are schema-checked, the Interceptor scopes tool calls, the agent cannot write or approve |
+| Prompt injection in claim text or documents | Input is delimited data, text passes Guardrails, outputs are schema-checked, the signed ticket limits tool calls to this claim, the agent cannot write or approve |
+| Job ticket missing, expired or invalid | The Interceptor rejects the tool call. The agent cannot finish, the Worker fails the attempt, and SQS retries with a new ticket. After 3 attempts the DLQ routes the claim |
 
 ## Open decisions to finalize
 
@@ -214,7 +248,7 @@ Record the answer in this section once agreed.
 5. Retention period for evidence and audit records.
 6. Seed data set for the demo (tenant, customers, policies with IMEI and VIN, `CLM-1042`, synthetic police report, damaged-phone photo with IMEI).
 7. Global or US geo inference profile for Haiku 5.5 (10% price difference, data routing).
-8. Check in the account: Bedrock quotas for Haiku 5.5, AgentCore Runtime, Gateway and interceptor availability in us-east-1, Lambda concurrency quota.
+8. Check in the account: Bedrock quotas for Haiku 5.5, AgentCore Runtime, Gateway with `AWS_IAM` inbound auth and a REQUEST interceptor with header pass-through in us-east-1, Lambda concurrency quota.
 
 Settled:
 
@@ -222,6 +256,7 @@ Settled:
 - **Model: Claude Haiku 5.5** with prompt caching, `maxTokens` limits and normalized images.
 - **No Knowledge Base on the decision path.** Coverage decisions use structured DynamoDB fields enforced in code.
 - **Investigator agent on AgentCore Runtime with read-only tools through AgentCore Gateway and an Interceptor. The Decision Lambda is code outside the agent.**
+- **Credentials:** Cognito access tokens at API Gateway only. IAM SigV4 for the Runtime to call the MCP gateway. A KMS-signed job ticket scopes every tool call to one claim. No token passthrough anywhere.
 - **Asynchronous submit with SQS and a DLQ.** 202 and polling. Client request ID for idempotency. DLQ routes the claim to an adjuster.
 - **Evidence upload:** presigned POST from the browser to S3. Metadata only through the API. The Worker reads files from S3.
 - **Compute: Lambda.** Fargate is a later option behind the same queue.

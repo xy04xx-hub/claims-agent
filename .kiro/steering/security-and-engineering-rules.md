@@ -4,7 +4,8 @@ These rules apply to all code and infrastructure in this project. They map direc
 
 ## Security
 
-- **Authentication:** every API route uses the Cognito JWT authorizer. No anonymous routes except the static console.
+- **Authentication:** every API route uses the Cognito JWT authorizer with **access tokens** (never ID tokens). No anonymous routes except the static console.
+- **Service-to-service credentials:** each hop uses its own credential (IAM role, or an OAuth token issued for that service). **No token passthrough:** never forward a received token to another service. The user's token stops at API Gateway and never goes into queues, logs, the agent or the MCP gateway. The MCP gateway uses IAM inbound auth, and every tool call is scoped to one claim by a signed job ticket that the model cannot see or change. Details in `architecture.md`, section "Credentials and tokens".
 - **Authorization:** derive the user ID and role from the verified JWT claims, never from the request body. Customers can read only claims where `customerId` equals their own ID. Only the `Adjuster` group can read the queue or approve/reject.
 - **Least privilege:** one IAM role per Lambda, scoped to the specific table, bucket prefix and Bedrock model ARN it uses. No `*` resources or actions unless AWS requires it, and then comment why.
 - **Network and data:** HTTPS only. S3 buckets are private with Block Public Access, encryption at rest and `enforceSSL`. DynamoDB has encryption on and point-in-time recovery. No public data stores.
@@ -34,4 +35,5 @@ These rules apply to all code and infrastructure in this project. They map direc
 - Follow these steering files over ad hoc ideas. If a change conflicts with them, ask first.
 - Don't add features beyond the scope in `product.md`.
 - Any change to the approval logic needs a test showing the model cannot cause approval above the limit or with a fraud signal.
+- Any change to tool authorization needs a test showing a missing, expired, wrongly signed or other-claim job ticket is rejected, and that a user token is rejected at the MCP gateway.
 - Prefer small, reviewable changes. State assumptions when proceeding.
