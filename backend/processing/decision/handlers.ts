@@ -1,6 +1,6 @@
 import { buildAudit } from "./audit.js";
 import { evaluate, failSafeDecision, routedDecision, type Evaluation, type Proposal } from "./evaluate.js";
-import { validateDecision, validateProposal } from "./schemas.js";
+import { validateDecision, validateJobMessage, validateProposal } from "./schemas.js";
 import type {
   ClaimRecord, DecideEvent, DecideResult, Deps, InvokeContext, SqsBatchResponse, SqsEvent,
 } from "./types.js";
@@ -71,8 +71,37 @@ export function createHandlers(deps: Deps): Handlers {
     return { result: "DECIDED", decision: evaluation.decision };
   };
 
-  const routeOnly: Handlers["routeOnly"] = async () => {
-    throw new Error("routeOnly: not implemented");
+  /** DLQ entry point. Always routes: the automatic check could not finish. Never approves. */
+  const routeOne = async (record: SqsEvent["Records"][number], ctx: InvokeContext) => {
+    const body: unknown = JSON.parse(record.body);
+    const valid = validateJobMessage(body);
+    if (!valid.ok) throw new Error(`job message failed validation: ${valid.error}`);
+    const { tenantId, claimId } = body as { tenantId: string; claimId: string };
+    const claim = await deps.store.getClaim(tenantId, claimId);
+    if (!claim) {
+      deps.log.warn("routeOnly: claim not found, ignoring", { claimId });
+      return;
+    }
+    if (claim.status !== "PROCESSING") return;
+    const evaluation = fallbackEval(claim, failSafeDecision(claimId));
+    const decidedAt = deps.now().toISOString();
+    const audit = buildAudit({
+      claim, evaluation, timestamp: decidedAt, actorId: "decision-lambda:routeOnly", requestId: ctx.awsRequestId,
+    });
+    await deps.store.commitDecision({ claim, decision: evaluation.decision, audit, decidedAt });
+  };
+
+  const routeOnly: Handlers["routeOnly"] = async (event, ctx) => {
+    const batchItemFailures: SqsBatchResponse["batchItemFailures"] = [];
+    for (const record of event.Records) {
+      try {
+        await routeOne(record, ctx);
+      } catch (err) {
+        deps.log.error("routeOnly: record failed", { messageId: record.messageId, error: err instanceof Error ? err.name : "unknown" });
+        batchItemFailures.push({ itemIdentifier: record.messageId });
+      }
+    }
+    return { batchItemFailures };
   };
   const handler: Handlers["handler"] = (event, ctx) =>
     "Records" in event ? routeOnly(event, ctx) : decide(event, ctx);

@@ -1,0 +1,20 @@
+{
+  "Records": [
+    {
+      "messageId": "059f36b4-87a3-44ab-83d2-661975830a7d",
+      "receiptHandle": "AQEBsample-receipt-handle",
+      "body": "{\"tenantId\":\"t1\",\"claimId\":\"CLM-2001\",\"attempt\":3,\"requestId\":\"req-123\"}",
+      "attributes": {
+        "ApproximateReceiveCount": "1",
+        "SentTimestamp": "1795255200000",
+        "SenderId": "AIDASAMPLE",
+        "ApproximateFirstReceiveTimestamp": "1795255200001"
+      },
+      "messageAttributes": {},
+      "md5OfBody": "00000000000000000000000000000000",
+      "eventSource": "aws:sqs",
+      "eventSourceARN": "arn:aws:sqs:us-east-1:000000000000:sample-dlq",
+      "awsRegion": "us-east-1"
+    }
+  ]
+}
