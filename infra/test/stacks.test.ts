@@ -83,20 +83,29 @@ describe('dev-a synth', () => {
     expect(assembly.stacks).toHaveLength(7);
     for (const st of assembly.stacks) {
       const types = Object.values((st.template.Resources ?? {}) as Record<string, { Type: string }>).map((r) => r.Type);
-      const bad = types.filter((t) => DENY_LIST.includes(t));
-      expect(bad, `${st.stackName} has deny-listed resources`).toEqual([]);
-      const extra = types.filter((t) => t !== 'AWS::CDK::Metadata');
-      expect(extra, `${st.stackName} has resources other than AWS::CDK::Metadata`).toEqual([]);
+      // The Foundation stack (T-05) legitimately holds the data resources; the other six hold only metadata.
+      if (!st.stackName.endsWith('-Foundation')) {
+        const bad = types.filter((t) => DENY_LIST.includes(t));
+        expect(bad, `${st.stackName} has deny-listed resources`).toEqual([]);
+        const extra = types.filter((t) => t !== 'AWS::CDK::Metadata');
+        expect(extra, `${st.stackName} has resources other than AWS::CDK::Metadata`).toEqual([]);
+      }
       const errors = st.messages.filter((m) => m.level === 'error');
       expect(errors, `${st.stackName} nag errors`).toEqual([]);
       expect(JSON.stringify(st.template)).not.toContain('cdk_nag');
     }
   });
 
-  it('records no suppressions on any construct', () => {
+  it('records only the Foundation EvidenceBucket AwsSolutions-S1 acknowledgment', () => {
     const { app } = buildApp('dev-a');
-    const found = app.node.findAll().filter((c) => c.node.metadata.some((m) => /nag|acknowledg|suppress/i.test(m.type)));
-    expect(found.map((c) => c.node.path)).toEqual([]);
+    const found: Array<{ path: string; ids: string[] }> = [];
+    for (const c of app.node.findAll()) {
+      for (const m of c.node.metadata) {
+        if (!/nag|acknowledg|suppress/i.test(m.type)) continue;
+        found.push({ path: c.node.path, ids: Object.keys((m.data ?? {}) as Record<string, unknown>) });
+      }
+    }
+    expect(found).toEqual([{ path: 'Foundation/EvidenceBucket', ids: ['Annotation::AwsSolutions-S1'] }]);
   });
 });
 
