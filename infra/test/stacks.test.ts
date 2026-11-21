@@ -134,6 +134,9 @@ describe('dev-a synth', () => {
       `${handler}/ServiceRole/DefaultPolicy IAM5`,
       'Processing/decision IAM5',
       'Processing/decision L1',
+      'Processing/evidence-processor IAM5',
+      'Processing/evidence-processor L1',
+      'Processing/EvidenceEventsDlq SQS3',
     ].sort();
     expect(flat).toEqual(expected);
   });

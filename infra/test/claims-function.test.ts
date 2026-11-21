@@ -75,7 +75,7 @@ describe('ClaimsFunction', () => {
     expect(() => build({ timeout: Duration.seconds(900), memorySize: 10240 })).not.toThrow();
   });
 
-  it('is instantiated only by Processing (the decision function): Foundation has the CDK auto-delete provider Lambda, the other stacks none', () => {
+  it('is instantiated only by Processing (the decision function and the evidence processor): Foundation has the CDK auto-delete provider Lambda, the other stacks none', () => {
     const app = new App();
     const config = loadStageConfig('dev-a', path.resolve(here, '../config'), () => undefined);
     const props = {
@@ -103,8 +103,8 @@ describe('ClaimsFunction', () => {
         const [logicalId] = Object.keys(t.findResources('AWS::Lambda::Function'));
         expect(logicalId).toMatch(/^CustomS3AutoDeleteObjectsCustomResourceProvider/);
       } else if (s instanceof ProcessingStack) {
-        // T-14: the Decision Lambda, built with ClaimsFunction.
-        t.resourceCountIs('AWS::Lambda::Function', 1);
+        // T-14 and T-13: the Decision Lambda and the Evidence Processor, both built with ClaimsFunction.
+        t.resourceCountIs('AWS::Lambda::Function', 2);
       } else if (s === stacks[3]) {
         // Web: only the CDK-managed BucketDeployment handler (and auto-delete provider if present), no ClaimsFunction.
         const ids = Object.keys(t.findResources('AWS::Lambda::Function'));
