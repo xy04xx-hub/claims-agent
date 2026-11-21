@@ -15,7 +15,7 @@ Each task is one commit (`feat(T-14): <task>`). Branch `a/T-14-decision`. Do not
 - [x] 11. Processing stack: decision function with the dedicated role and least-privilege grants, env vars from stage config, Foundation passed as typed props. In `infra/lib/build-app.ts` change only the Processing block: get the Foundation stack inside it with `app.node.findChild('Foundation') as FoundationStack`, so the Foundation line and the other blocks stay untouched
 - [x] 12. Stack test: only the decision role has `UpdateItem` on Claims in the synthesized template; no wildcard resources except X-Ray
 - [x] 13. Run `npm test -w backend/processing` (69 passed), the infra tests (221 passed) and `npm run typecheck` (clean)
-- [ ] 14. Deploy and verify in `dev-a` (only Foundation and Processing):
+- [x] 14. Deploy and verify in `dev-a` (only Foundation and Processing):
   - `CDK_DEFAULT_ACCOUNT=<my account> npx cdk deploy ClaimsAgent-dev-a-Foundation ClaimsAgent-dev-a-Processing -c stage=dev-a` from `infra/` (no other stack).
   - Put minimal synthetic items (policy, pack, a `PROCESSING` claim with evidence index entries) with the T-12 seed if it exists, otherwise `aws dynamodb put-item`.
   - Happy path: `aws lambda invoke` the `decide` entry with a clean proposal. Expect `AUTO_APPROVED`, claim updated, audit record present.
@@ -24,3 +24,16 @@ Each task is one commit (`feat(T-14): <task>`). Branch `a/T-14-decision`. Do not
   - routeOnly: no DLQ exists yet (T-09). `aws lambda invoke` the Lambda with `test/sqs-dlq-event.json` (real SQS shape, `body` = job message for a `PROCESSING` claim). Expect the claim routed with reason `AUTOMATIC_CHECK_UNAVAILABLE` and `FailSafeRouted` emitted. T-09 later adds the event source mapping only.
   - Check `Routed`, `AutoApproved` and `FailSafeRouted` appear in CloudWatch metrics and the logs hold no personal data.
   - Record the results in the PR. Leave the stack deployed or destroy it, as agreed.
+
+## Verification results (dev-a, account 116493205383, 2026-11-21)
+
+Deployed with `npx cdk deploy Foundation Processing -c stage=dev-a`: both stacks created, no errors. Test data was put with a throwaway script (the T-12 seed does not exist yet), tenant `demo-insurer`, synthetic values only.
+
+- Happy path: `decide` on CLM-V001 returned `AUTO_APPROVED`, payout 130. Claim item `AUTO_APPROVED`, one audit record with policy and pack version, thresholds in force, 12 passed checks, actor `agent`, model, prompt version and ticket `jti`.
+- Second decision, same claim: `ALREADY_DECIDED`. Claim unchanged, still one audit record.
+- Kill switch: set `autoApproveEnabled=false` after a warm invoke. Probes every 5 s kept approving until t+34 s and the probe at t+39 s returned `ROUTED_TO_ADJUSTER` with `AUTO_APPROVE_ENABLED` failed (within the 60 s cache limit). Parameter set back to `true`.
+- routeOnly: invoked with an SQS-shaped event (the sample event with the dev-a claim). CLM-R001 became `ROUTED_TO_ADJUSTER`, reason `AUTOMATIC_CHECK_UNAVAILABLE`, fail-safe, payout 0, sparse queue key set, one audit record. A repeat invoke changed nothing.
+- Metrics in namespace `ClaimsAgent`: `AutoApproved`, `Routed` (reason `AUTO_APPROVE_ENABLED` and `AUTOMATIC_CHECK_UNAVAILABLE`), `FailSafeRouted`, `DecisionLatencyMs`.
+- Logs: 68 events, no errors. A scan found none of the IMEIs, the holder name or the claim text.
+- Not covered: a real DLQ trigger (T-09, T-15). Test data and both stacks are left in place.
+
