@@ -23,6 +23,12 @@ const validConfig = {
   jobTicketTtlSeconds: 60,
   workerTimeoutSeconds: 60,
   sqsMaxReceiveCount: 3,
+  evidenceRetentionDays: 90,
+  consoleOrigins: ['http://localhost:5173'],
+  earlyClaimDays: 14,
+  frequencyWindowDays: 30,
+  frequencyMaxClaims: 3,
+  outlierMultiple: 2,
 };
 
 const caseVariant = (s: string) =>

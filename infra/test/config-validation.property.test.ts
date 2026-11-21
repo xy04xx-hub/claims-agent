@@ -33,6 +33,12 @@ const validConfigArb: fc.Arbitrary<Cfg> = fc
     autoApproveCaps: fc.record(Object.fromEntries(CAP_KEYS.map((k) => [k, capArb]))),
     bedrockModelId: fc.stringMatching(/^[a-z][a-z0-9.:-]{0,59}$/),
     ...Object.fromEntries(POSITIVE_KEYS.map((k) => [k, posArb])),
+    evidenceRetentionDays: fc.integer({ min: 1, max: 3650 }),
+    consoleOrigins: fc.constant(['http://localhost:5173']),
+    earlyClaimDays: fc.integer({ min: 0, max: 365 }),
+    frequencyWindowDays: fc.integer({ min: 1, max: 365 }),
+    frequencyMaxClaims: fc.integer({ min: 1, max: 1000 }),
+    outlierMultiple: fc.integer({ min: 1, max: 100 }),
   })
   .chain((base) =>
     fc

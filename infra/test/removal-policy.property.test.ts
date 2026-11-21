@@ -35,6 +35,12 @@ const baseConfig: StageConfig = {
   jobTicketTtlSeconds: 1,
   workerTimeoutSeconds: 1,
   sqsMaxReceiveCount: 1,
+  evidenceRetentionDays: 90,
+  consoleOrigins: ['http://localhost:5173'],
+  earlyClaimDays: 14,
+  frequencyWindowDays: 30,
+  frequencyMaxClaims: 3,
+  outlierMultiple: 2,
 };
 
 const configArb = fc.option(policyArb, { nil: undefined }).map(

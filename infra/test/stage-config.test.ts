@@ -63,6 +63,12 @@ describe('shipped config files', () => {
     expect(cfg.workerTimeoutSeconds).toBe(60);
     expect(cfg.sqsMaxReceiveCount).toBe(3);
     expect(cfg.maxTokens).toBeGreaterThan(0);
+    expect(cfg.evidenceRetentionDays).toBe(90);
+    expect(cfg.consoleOrigins).toEqual(['http://localhost:5173']);
+    expect(cfg.earlyClaimDays).toBe(14);
+    expect(cfg.frequencyWindowDays).toBe(30);
+    expect(cfg.frequencyMaxClaims).toBe(3);
+    expect(cfg.outlierMultiple).toBe(2);
   });
 
   const files = readdirSync(CONFIG_DIR).filter((f) => f.endsWith('.json'));

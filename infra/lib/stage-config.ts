@@ -20,6 +20,12 @@ export interface StageConfig {
   jobTicketTtlSeconds: number;
   workerTimeoutSeconds: number;
   sqsMaxReceiveCount: number;
+  evidenceRetentionDays: number;
+  consoleOrigins: string[];
+  earlyClaimDays: number;
+  frequencyWindowDays: number;
+  frequencyMaxClaims: number;
+  outlierMultiple: number;
   removalPolicy?: RemovalPolicyName;
 }
 
@@ -42,6 +48,24 @@ const POSITIVE_KEYS = [
   'sqsMaxReceiveCount',
 ] as const;
 
+const INTEGER_RANGES = [
+  ['evidenceRetentionDays', 1, 3650],
+  ['earlyClaimDays', 0, 365],
+  ['frequencyWindowDays', 1, 365],
+  ['frequencyMaxClaims', 1, 1000],
+] as const;
+const MAX_CONSOLE_ORIGINS = 5;
+const ORIGIN_HOST = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/;
+/** True for `https://<host>` or `http://localhost[:port]`, with no path, query, fragment or wildcard. */
+export function isValidConsoleOrigin(origin: unknown): boolean {
+  if (typeof origin !== 'string') return false;
+  const m = /^(https?):\/\/([^/?#@*:\s]+)(?::(\d{1,5}))?$/.exec(origin);
+  if (!m) return false;
+  const [, scheme, host, port] = m;
+  if (host.length > 253 || !ORIGIN_HOST.test(host)) return false;
+  if (port !== undefined && (Number(port) < 1 || Number(port) > 65535)) return false;
+  return scheme === 'https' ? true : host === 'localhost';
+}
 /** Error that names the config file and the offending key (or parse position). */
 export class ConfigError extends Error {
   constructor(
@@ -85,6 +109,33 @@ export function validateStageConfig(value: unknown, file: string): StageConfig {
     }
   }
 
+  for (const [k, min, max] of INTEGER_RANGES) {
+    const v = value[k];
+    if (typeof v !== 'number' || !Number.isInteger(v) || v < min || v > max) {
+      throw new ConfigError(file, k, `must be an integer from ${min} to ${max}`);
+    }
+  }
+  const om = value.outlierMultiple;
+  if (typeof om !== 'number' || !Number.isFinite(om) || om <= 0 || om > 100) {
+    throw new ConfigError(file, 'outlierMultiple', 'must be a number > 0 and <= 100');
+  }
+  const origins = value.consoleOrigins;
+  if (!Array.isArray(origins) || origins.length < 1 || origins.length > MAX_CONSOLE_ORIGINS) {
+    throw new ConfigError(
+      file,
+      'consoleOrigins',
+      `must be an array of 1 to ${MAX_CONSOLE_ORIGINS} origins`,
+    );
+  }
+  origins.forEach((o, i) => {
+    if (!isValidConsoleOrigin(o)) {
+      throw new ConfigError(
+        file,
+        `consoleOrigins[${i}]`,
+        'must be https://<host> or http://localhost[:port], with no path, query or wildcard',
+      );
+    }
+  });
   const rp = value.removalPolicy;
   if (rp !== undefined && !REMOVAL_POLICIES.includes(rp as RemovalPolicyName)) {
     throw new ConfigError(
