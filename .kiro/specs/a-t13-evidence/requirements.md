@@ -37,7 +37,7 @@ Known limitation: until T-15 assigns claim IDs to evidence rows, two new claims 
 1. THE Processing_Stack SHALL deploy the Evidence_Processor as a Node.js 22 ARM64 Lambda built from `backend/processing/evidence-processor/index.ts`, with a deliberately set timeout.
 2. THE Processing_Stack SHALL create an EventBridge rule that matches `Object Created` events from the Evidence_Bucket and targets the Evidence_Processor.
 3. THE EventBridge rule SHALL filter on the evidence key shape `<tenantId>/<customerId>/<evidenceId>` (at least two slashes), so objects written elsewhere in the bucket do not invoke the Evidence_Processor.
-4. THE Processing_Stack SHALL give the Evidence_Processor a dedicated IAM role that allows `s3:GetObject` on the Evidence_Bucket evidence key shape, `dynamodb:PutItem` on the Evidence_Index, use of the data KMS key, and `sqs:SendMessage` on the failed-event dead-letter queue, and nothing else.
+4. THE Processing_Stack SHALL give the Evidence_Processor a dedicated IAM role that allows `s3:GetObject` on the Evidence_Bucket evidence key shape, `dynamodb:PutItem` on the Evidence_Index, use of the data KMS key, and `sqs:SendMessage` (plus the read-only `sqs:GetQueueAttributes` and `sqs:GetQueueUrl` that CDK adds) on the failed-event dead-letter queue, and nothing else.
 5. THE Processing_Stack SHALL add a cdk-nag suppression with a written reason for every rule the Evidence_Processor resources trigger.
 6. THE Evidence_Processor SHALL use no new native dependencies.
 7. WHEN the stack is synthesized, THE Processing_Stack SHALL pass the stack assertion tests for the rule pattern, the role policy and the absence of wildcard actions.

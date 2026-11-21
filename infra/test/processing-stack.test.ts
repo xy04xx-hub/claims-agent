@@ -1,4 +1,5 @@
 // T-14: the Decision Lambda's role and the rule that only it can write a decision status.
+// T-13: the Evidence Processor, its EventBridge rule, dead-letter queue and role.
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { App, RemovalPolicy, Stack } from 'aws-cdk-lib';
@@ -58,6 +59,21 @@ function statements(stack: Stack): Statement[] {
   }
   return out;
 }
+/** Statements of the role whose logical ID contains `needle` (the policy and the inline policies of that role). */
+function statementsOf(stack: Stack, needle: string): Statement[] {
+  const t = Template.fromStack(stack);
+  const out: Statement[] = [];
+  for (const [id, p] of Object.entries(t.findResources('AWS::IAM::Policy'))) {
+    if (id.toLowerCase().includes(needle)) out.push(...(p.Properties.PolicyDocument.Statement as Statement[]));
+  }
+  for (const [id, r] of Object.entries(t.findResources('AWS::IAM::Role'))) {
+    if (!id.toLowerCase().includes(needle)) continue;
+    for (const pol of (r.Properties.Policies ?? []) as { PolicyDocument: { Statement: Statement[] } }[]) {
+      out.push(...pol.PolicyDocument.Statement);
+    }
+  }
+  return out;
+}
 const actions = (s: Statement) => (Array.isArray(s.Action) ? s.Action : [s.Action]);
 const text = (v: unknown) => JSON.stringify(v);
 
@@ -65,15 +81,15 @@ describe('Processing stack: decision function', () => {
   const { processing, all } = build();
   const t = Template.fromStack(processing);
 
-  it('is one Node.js 22 ARM64 function with a deliberate timeout and the table, parameter and threshold variables', () => {
-    t.resourceCountIs('AWS::Lambda::Function', 1);
+  it('is a Node.js 22 ARM64 function with a deliberate timeout and the table, parameter and threshold variables', () => {
+    t.resourceCountIs('AWS::Lambda::Function', 2); // the decision function and the evidence processor (T-13)
     t.hasResourceProperties('AWS::Lambda::Function', {
       Runtime: 'nodejs22.x',
       Architectures: ['arm64'],
       Timeout: 15,
       MemorySize: 512,
     });
-    const [fn] = Object.values(t.findResources('AWS::Lambda::Function'));
+    const fn = Object.values(t.findResources('AWS::Lambda::Function')).find((f) => f.Properties.Timeout === 15)!;
     const env = Object.keys(fn.Properties.Environment.Variables as Record<string, unknown>);
     expect(env).toEqual(expect.arrayContaining([
       'CLAIMS_TABLE', 'POLICIES_TABLE', 'PACKS_TABLE', 'EVIDENCE_INDEX_TABLE', 'AUDIT_TABLE', 'AUTO_APPROVE_PARAMETER',
@@ -107,7 +123,7 @@ describe('Processing stack: decision function', () => {
   });
 
   it('has no wildcard action and no wildcard resource except X-Ray', () => {
-    for (const s of statements(processing)) {
+    for (const s of statementsOf(processing, 'decision')) {
       expect(actions(s).filter((a) => a === '*' || a.endsWith(':*')), text(s)).toEqual([]);
       if (s.Resource === '*') {
         expect(actions(s).every((a) => a.startsWith('xray:')), text(s)).toBe(true);
@@ -119,9 +135,88 @@ describe('Processing stack: decision function', () => {
 
   it('grants no write on Policies, ClaimTypePacks or EvidenceIndex', () => {
     for (const name of ['PoliciesTable', 'ClaimTypePacksTable', 'EvidenceIndexTable']) {
-      for (const s of statements(processing).filter((x) => text(x.Resource).includes(name))) {
+      for (const s of statementsOf(processing, 'decision').filter((x) => text(x.Resource).includes(name))) {
         expect(actions(s).sort(), name).toEqual(['dynamodb:GetItem', 'dynamodb:Query']);
       }
     }
+  });
+});
+
+describe('Processing stack: evidence processor (T-13)', () => {
+  const { processing } = build();
+  const t = Template.fromStack(processing);
+  const fnId = Object.keys(t.findResources('AWS::Lambda::Function')).find((id) => id.toLowerCase().includes('evidenceprocessor'))!;
+  const fn = t.findResources('AWS::Lambda::Function')[fnId];
+  const stmts = statementsOf(processing, 'evidenceprocessor');
+
+  it('is a Node.js 22 ARM64 function with a deliberate timeout, memory and its three variables', () => {
+    expect(fn.Properties).toMatchObject({ Runtime: 'nodejs22.x', Architectures: ['arm64'], Timeout: 20, MemorySize: 1024 });
+    const env = fn.Properties.Environment.Variables as Record<string, unknown>;
+    expect(Object.keys(env)).toEqual(expect.arrayContaining(['EVIDENCE_INDEX_TABLE', 'EVIDENCE_BUCKET', 'MAX_OBJECT_BYTES']));
+    expect(env.MAX_OBJECT_BYTES).toBe('10485760'); // twice the 5 MB upload limit
+  });
+
+  it('is triggered by Object Created events of the evidence bucket, for keys of the shape */*/*', () => {
+    const [rule] = Object.values(t.findResources('AWS::Events::Rule'));
+    expect(rule.Properties.EventPattern).toMatchObject({
+      source: ['aws.s3'],
+      'detail-type': ['Object Created'],
+      detail: { object: { key: [{ wildcard: '*/*/*' }] } },
+    });
+    expect(text(rule.Properties.EventPattern.detail.bucket.name)).toContain('EvidenceBucket');
+  });
+
+  it('has one target with a short retry policy and a dead-letter queue', () => {
+    const [rule] = Object.values(t.findResources('AWS::Events::Rule'));
+    expect(rule.Properties.Targets).toHaveLength(1);
+    const target = rule.Properties.Targets[0];
+    expect(target.RetryPolicy).toEqual({ MaximumEventAgeInSeconds: 300, MaximumRetryAttempts: 2 });
+    expect(text(target.DeadLetterConfig)).toContain('EvidenceEventsDlq');
+  });
+
+  it('retries failed invocations twice and then sends the event to the dead-letter queue', () => {
+    const [cfg] = Object.values(t.findResources('AWS::Lambda::EventInvokeConfig'));
+    expect(cfg.Properties).toMatchObject({ MaximumRetryAttempts: 2, MaximumEventAgeInSeconds: 300 });
+    expect(text(cfg.Properties.DestinationConfig.OnFailure.Destination)).toContain('EvidenceEventsDlq');
+  });
+
+  it('has an encrypted, SSL-only dead-letter queue that keeps messages 14 days', () => {
+    t.hasResourceProperties('AWS::SQS::Queue', { SqsManagedSseEnabled: true, MessageRetentionPeriod: 14 * 24 * 3600 });
+    const policies = Object.values(t.findResources('AWS::SQS::QueuePolicy')).map(text).join('');
+    expect(policies).toContain('aws:SecureTransport');
+  });
+
+  it('reads only evidence objects, writes only EvidenceIndex rows, uses only the data key, and may send to the one queue', () => {
+    const byAction = (a: string) => stmts.filter((s) => actions(s).includes(a));
+    expect(byAction('s3:GetObject')).toHaveLength(1);
+    expect(actions(byAction('s3:GetObject')[0])).toEqual(['s3:GetObject']);
+    expect(text(byAction('s3:GetObject')[0].Resource)).toContain('/*/*/*');
+    const put = byAction('dynamodb:PutItem');
+    expect(put).toHaveLength(1);
+    expect(actions(put[0])).toEqual(['dynamodb:PutItem']);
+    expect(text(put[0].Resource)).toContain('EvidenceIndexTable');
+    expect(text(put[0].Resource)).not.toContain('index/');
+    expect(actions(byAction('kms:Decrypt')[0]).sort()).toEqual(['kms:Decrypt', 'kms:DescribeKey', 'kms:GenerateDataKey']);
+    expect(text(byAction('kms:Decrypt')[0].Resource)).toContain('DataKey');
+    const sqsStmts = stmts.filter((s) => actions(s).some((a) => a.startsWith('sqs:')));
+    // SendMessage, plus the two read-only queue lookups CDK adds for a failure destination.
+    expect(sqsStmts.flatMap(actions).sort()).toEqual(['sqs:GetQueueAttributes', 'sqs:GetQueueUrl', 'sqs:SendMessage']);
+    expect(text(sqsStmts[0].Resource)).toContain('EvidenceEventsDlq');
+  });
+
+  it('has no wildcard action, and no wildcard resource except X-Ray and the evidence object ARN', () => {
+    for (const s of stmts) {
+      expect(actions(s).filter((a) => a === '*' || a.endsWith(':*')), text(s)).toEqual([]);
+      if (s.Resource === '*') expect(actions(s).every((a) => a.startsWith('xray:')), text(s)).toBe(true);
+      else if (actions(s).includes('s3:GetObject')) expect(text(s.Resource)).toMatch(/"\/\*\/\*\/\*"/);
+      else expect(text(s.Resource), text(s)).not.toMatch(/\*/);
+    }
+  });
+
+  it('cannot read or write claims, policies, packs, audit records or parameters', () => {
+    for (const name of ['ClaimsTable', 'PoliciesTable', 'ClaimTypePacksTable', 'AuditLogTable']) {
+      expect(stmts.filter((s) => text(s.Resource).includes(name)), name).toEqual([]);
+    }
+    expect(stmts.flatMap(actions).filter((a) => a.startsWith('ssm:') || a.startsWith('lambda:') || a.startsWith('bedrock'))).toEqual([]);
   });
 });
