@@ -105,6 +105,13 @@ describe('ClaimsFunction', () => {
       } else if (s instanceof ProcessingStack) {
         // T-14: the Decision Lambda, built with ClaimsFunction.
         t.resourceCountIs('AWS::Lambda::Function', 1);
+      } else if (s === stacks[3]) {
+        // Web: only the CDK-managed BucketDeployment handler (and auto-delete provider if present), no ClaimsFunction.
+        const ids = Object.keys(t.findResources('AWS::Lambda::Function'));
+        expect(ids.length).toBeGreaterThan(0);
+        for (const id of ids) {
+          expect(id).toMatch(/^(Custom(CDKBucketDeployment|S3AutoDeleteObjectsCustomResourceProvider))/);
+        }
       } else {
         t.resourceCountIs('AWS::Lambda::Function', 0);
       }
