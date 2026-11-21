@@ -30,7 +30,6 @@ const caseVariant = (s: string) =>
     [...s].map((c, i) => (flags[i] ? c.toUpperCase() : c.toLowerCase())).join(''),
   );
 
-const affix = fc.stringMatching(/^[a-z]{0,6}$/);
 const sep = fc.constantFrom('_', '-', '.', ' ');
 
 // Keys that must be flagged: secret / password / token as a standalone word (any letter case,

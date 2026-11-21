@@ -46,7 +46,7 @@ describe('ClaimsFunction', () => {
 
   it('adds only the caller variables and the two standard ones', () => {
     const t = build();
-    const [fn] = Object.values(t.findResources('AWS::Lambda::Function')) as any[];
+    const [fn] = Object.values(t.findResources('AWS::Lambda::Function')) as Array<{ Properties: { Environment: { Variables: Record<string, string> } } }>;
     expect(fn.Properties.Environment.Variables).toEqual({
       CLAIMS_TABLE: 'tbl',
       POWERTOOLS_SERVICE_NAME: 'test-fn',
