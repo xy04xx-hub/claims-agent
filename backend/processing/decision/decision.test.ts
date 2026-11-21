@@ -204,8 +204,36 @@ describe("evidence processing not built yet (T-13)", () => {
     const { deps } = makeDeps({ store });
     expect(failedCodes(await createHandlers(deps).decide(event(), ctx))).toEqual(["REQUIRED_EVIDENCE_PRESENT"]);
   });
+  it("evidence uploaded before the claim (claimId UNASSIGNED) counts when the claim lists it", async () => {
+    const store = new FakeStore();
+    store.evidence = [{ ...photo, claimId: "UNASSIGNED" }];
+    const { deps } = makeDeps({ store });
+    const res = await createHandlers(deps).decide(event(), ctx);
+    expect(res).toMatchObject({ result: "DECIDED", decision: { outcome: "AUTO_APPROVED" } });
+    expect(failedCodes(res)).toEqual([]);
+  });
+  it("unassigned evidence without an EXIF date still raises EXIF_MISSING", async () => {
+    const store = new FakeStore();
+    store.evidence = [{ ...photo, claimId: "UNASSIGNED", exifDate: undefined }];
+    const { deps } = makeDeps({ store });
+    const res = (await createHandlers(deps).decide(event(), ctx)) as { decision: { informationalFlags: string[] } };
+    expect(res.decision.informationalFlags).toContain("EXIF_MISSING");
+  });
+  it("unassigned evidence that the claim does not list is not used", async () => {
+    const store = new FakeStore();
+    store.getEvidence = async () => [{ ...photo, evidenceId: "EVD-OTHER", claimId: "UNASSIGNED" }];
+    const { deps } = makeDeps({ store });
+    expect(failedCodes(await createHandlers(deps).decide(event(), ctx))).toEqual(["REQUIRED_EVIDENCE_PRESENT"]);
+  });
+  it("unassigned evidence cannot make an approval above the cap", async () => {
+    const store = new FakeStore();
+    store.evidence = [{ ...photo, claimId: "UNASSIGNED" }];
+    store.claims.set("t1#CLM-2001", claim({ amountClaimed: 700 }));
+    const { deps } = makeDeps({ store });
+    const res = (await createHandlers(deps).decide(event(), ctx)) as { decision: { outcome: string } };
+    expect(res.decision.outcome).toBe("ROUTED_TO_ADJUSTER");
+  });
 });
-
 describe("routeOnly", () => {
   const sample = JSON.parse(readFileSync(new URL("./test/sqs-dlq-event.json", import.meta.url), "utf8")) as SqsEvent;
   const withBody = (body: string): SqsEvent => ({ Records: [{ ...sample.Records[0], body }] });

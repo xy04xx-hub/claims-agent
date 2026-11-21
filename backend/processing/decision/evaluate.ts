@@ -5,6 +5,7 @@ import {
   type Cause, type ClaimTypePack, type Decision, type EvidenceKind, type Facts, type InformationalFlag,
   type Policy, type PolicyItem, type Thresholds,
 } from "@claims-agent/domain";
+import { UNASSIGNED_CLAIM_ID } from "./keys.js";
 import type { ClaimRecord, Deps, EvidenceRecord } from "./types.js";
 
 export interface Proposal {
@@ -189,7 +190,13 @@ export async function evaluate(deps: Deps, claim: ClaimRecord, proposal: Proposa
 
   const claimedCause: Cause = (CAUSES as readonly string[]).includes(claim.cause) ? (claim.cause as Cause) : "UNCLEAR";
   const evidence = await store.getEvidence(t, claim.evidenceIds);
-  const own = evidence.filter((e) => !e.claimId || e.claimId === claim.claimId);
+  // Rows the Evidence Processor wrote before the claim existed carry UNASSIGNED. They count only if the claim lists them.
+  const own = evidence.filter(
+    (e) =>
+      !e.claimId ||
+      e.claimId === claim.claimId ||
+      (e.claimId === UNASSIGNED_CLAIM_ID && claim.evidenceIds.includes(e.evidenceId)),
+  );
   const provided = [...new Set(own.map((e) => e.kind).filter((k): k is EvidenceKind => k !== undefined))];
 
   const mismatch = evidenceMismatch(item, pack, proposal, claim);
