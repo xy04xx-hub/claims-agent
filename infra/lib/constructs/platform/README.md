@@ -6,6 +6,7 @@ Platform helpers used by the stacks. Most are pure functions with no AWS resourc
 | File | Purpose |
 |---|---|
 | `app-client-urls.ts` | Builds the Cognito callback and logout URLs from the console URL and the local origins. |
+| `api-model.ts` | Constants and pure helpers for the Api stack: route table, throttle, sizes, CORS, access log fields, audience builder. Imports nothing from `aws-cdk-lib`. |
 | `auth-model.ts` | Constants for the Auth stack: group names, tenant attribute and pattern, password policy, token lifetimes, trigger settings. Imports nothing from `aws-cdk-lib`, so scripts can use it. |
 | `cognito-domain.ts` | Derives the Cognito domain prefix `claims-<stage>-<8 hex>` from account, region and stage, and rejects reserved words. |
 | `console-assets.ts` | Chooses `frontend/dist` or the placeholder page as the console content. |
@@ -13,6 +14,7 @@ Platform helpers used by the stacks. Most are pure functions with no AWS resourc
 | `data-model.ts` | DynamoDB key and index attribute names for the five tables. |
 | `data-protection.ts` | Removal policy and deletion protection by stage. |
 | `evidence-bucket-config.ts` | CORS rule and lifecycle rules for the evidence bucket. |
+| `route-scoped-lambda-integration.ts` | Lambda proxy integration whose invoke permission is limited to one HTTP method and path. |
 | `ssm-parameters.ts` | Names and values of the SSM parameters, including the kill switch. |
 
 Helpers for the claims engine live in `../engine` (owner A). Add a row here when you add a helper to this folder.
