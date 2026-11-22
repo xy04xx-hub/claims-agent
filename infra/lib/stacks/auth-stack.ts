@@ -127,7 +127,8 @@ export class AuthStack extends cdk.Stack implements AuthResources {
       read: new cognito.ClientAttributes()
         .withStandardAttributes({ email: true, emailVerified: true, fullname: true })
         .withCustomAttributes(TENANT.attributeName),
-      write: new cognito.ClientAttributes().withStandardAttributes({ fullname: true }),
+      // email is required in the pool schema, so Cognito requires it to be writable.
+      write: new cognito.ClientAttributes().withStandardAttributes({ email: true, fullname: true }),
     };
     const validity = {
       accessTokenValidity: cdk.Duration.minutes(TOKEN_VALIDITY.accessMinutes),

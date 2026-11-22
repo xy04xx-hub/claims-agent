@@ -30,7 +30,8 @@ export const PASSWORD_POLICY = {
 /** Attribute sets shared by the console client and the verification client. */
 export const CLIENT_ATTRIBUTES = {
   read: ['email', 'email_verified', 'name', 'custom:tenantId'],
-  write: ['name'],
+  // Cognito rejects a client whose write attributes omit a required schema attribute (email).
+  write: ['email', 'name'],
 } as const;
 
 export const TOKEN_VALIDITY = { accessMinutes: 60, idMinutes: 60, refreshDays: 1 } as const;
