@@ -75,7 +75,7 @@ describe('ClaimsFunction', () => {
     expect(() => build({ timeout: Duration.seconds(900), memorySize: 10240 })).not.toThrow();
   });
 
-  it('is instantiated only by Processing (the decision function and the evidence processor) and Auth (the pre token function): Foundation has the CDK auto-delete provider Lambda, the other stacks none', () => {
+  it('is instantiated only by Processing (the decision function and the evidence processor), Auth (the pre token function) and Api (api-customer and api-adjuster): Foundation has the CDK auto-delete provider Lambda, the other stacks none', () => {
     const app = new App();
     const config = loadStageConfig('dev-a', path.resolve(here, '../config'), () => undefined);
     const props = {
@@ -86,10 +86,11 @@ describe('ClaimsFunction', () => {
     };
     const foundation = new FoundationStack(app, 'Foundation', props);
     const web = new WebStack(app, 'Web', props);
+    const auth = new AuthStack(app, 'Auth', { ...props, consoleUrl: web.consoleUrl });
     const stacks = [
       foundation,
-      new AuthStack(app, 'Auth', { ...props, consoleUrl: web.consoleUrl }),
-      new ApiStack(app, 'Api', props),
+      auth,
+      new ApiStack(app, 'Api', { ...props, auth }),
       web,
       new OpsStack(app, 'Ops', props),
       new ProcessingStack(app, 'Processing', { ...props, foundation }),
@@ -109,6 +110,9 @@ describe('ClaimsFunction', () => {
       } else if (s instanceof AuthStack) {
         // T-06: the pre token generation function, built with ClaimsFunction.
         t.resourceCountIs('AWS::Lambda::Function', 1);
+      } else if (s instanceof ApiStack) {
+        // T-08: api-customer and api-adjuster, built with ClaimsFunction.
+        t.resourceCountIs('AWS::Lambda::Function', 2);
       } else if (s instanceof WebStack) {
         // Web: only the CDK-managed BucketDeployment handler (and auto-delete provider if present), no ClaimsFunction.
         const ids = Object.keys(t.findResources('AWS::Lambda::Function'));

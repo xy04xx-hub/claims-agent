@@ -92,10 +92,11 @@ describe('dev-a synth', () => {
     expect(assembly.stacks).toHaveLength(7);
     for (const st of assembly.stacks) {
       const types = Object.values((st.template.Resources ?? {}) as Record<string, { Type: string }>).map((r) => r.Type);
-      // Foundation (T-05), Auth (T-06), Web (T-07) and Processing (T-14) hold resources; the other three hold only metadata.
+      // Foundation (T-05), Auth (T-06), Api (T-08), Web (T-07) and Processing (T-14) hold resources; Ops and Agent hold only metadata.
       if (
         !st.stackName.endsWith('-Foundation') &&
         !st.stackName.endsWith('-Auth') &&
+        !st.stackName.endsWith('-Api') &&
         !st.stackName.endsWith('-Web') &&
         !st.stackName.endsWith('-Processing')
       ) {
@@ -110,7 +111,7 @@ describe('dev-a synth', () => {
     }
   });
 
-  it('records only the known Foundation, Auth, Web and Processing acknowledgments', () => {
+  it('records only the known Foundation, Auth, Api, Web and Processing acknowledgments', () => {
     const { app } = buildApp('dev-a');
     const found: Array<{ path: string; ids: string[] }> = [];
     for (const c of app.node.findAll()) {
@@ -142,6 +143,10 @@ describe('dev-a synth', () => {
       'Auth/UserPool COG8',
       'Auth/PreTokenGeneration IAM5[Resource::*]',
       'Auth/PreTokenGeneration L1',
+      'Api/api-customer IAM5[Resource::*]',
+      'Api/api-customer L1',
+      'Api/api-adjuster IAM5[Resource::*]',
+      'Api/api-adjuster L1',
     ].sort();
     expect(flat).toEqual(expected);
   });
@@ -214,5 +219,5 @@ describe('removal policy propagation', () => {
   it('resolves RETAIN for demo and DESTROY for dev stages', () => {
     expect(buildApp('demo').stacks.every((s) => (s as unknown as { removalPolicy: unknown }).removalPolicy === cdk.RemovalPolicy.RETAIN)).toBe(true);
     expect(buildApp('dev-a').stacks.every((s) => (s as unknown as { removalPolicy: unknown }).removalPolicy === cdk.RemovalPolicy.DESTROY)).toBe(true);
-  });
+  }, 60_000); // two full app builds bundle the Lambda entries; the 10 s default is too tight under load
 });
