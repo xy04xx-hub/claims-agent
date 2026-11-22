@@ -526,6 +526,16 @@
         "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
         "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
         "timestamp": 1795353212191
+      },
+      {
+        "executionId": "8c57f0ef-7e9c-4d63-a678-5ad0f0a6d0a9",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795353441848
+      },
+      {
+        "executionId": "8c57f0ef-7e9c-4d63-a678-5ad0f0a6d0a9",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795354324036
       }
     ],
     "2. Config": [
@@ -589,6 +599,25 @@
         "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
         "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
         "timestamp": 1795353218144
+      }
+    ],
+    "12.1 Use the routing signal as the audit reasonCode": [
+      {
+        "executionId": "130eb2d3-904b-49de-a9e3-fe8843ac9af8",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795354564240
+      },
+      {
+        "executionId": "130eb2d3-904b-49de-a9e3-fe8843ac9af8",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795354693875
+      }
+    ],
+    "12. Audit reason code fix (found in the dev-a run)": [
+      {
+        "executionId": "130eb2d3-904b-49de-a9e3-fe8843ac9af8",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795354700384
       }
     ]
   }

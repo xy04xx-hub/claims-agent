@@ -5,7 +5,10 @@ import type { AuditRecord, ClaimRecord } from "./types.js";
 /** The single reason used for the Routed metric and the audit reasonCode. Undefined for an approval. */
 export function reasonCode(d: Decision): string | undefined {
   if (d.outcome === "AUTO_APPROVED") return undefined;
-  return d.checksFailed[0]?.code ?? d.riskSignals[0]?.code ?? "UNKNOWN";
+  const check = d.checksFailed[0]?.code;
+  // NO_RISK_SIGNALS is a check name, not a reason: report the signal that caused the routing.
+  if (check === "NO_RISK_SIGNALS") return d.riskSignals[0]?.code ?? check;
+  return check ?? d.riskSignals[0]?.code ?? "UNKNOWN";
 }
 
 export interface AuditInput {

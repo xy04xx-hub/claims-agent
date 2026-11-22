@@ -174,6 +174,14 @@ T-08 branch `origin/b/T-08-api-skeleton` is already merged into this branch and 
     - Run the e2e script for `dev-a` (add `--identifier-fallback` only if image reading fails) and show the output to the user: per-scenario elapsed time, final status, A payout, H reason naming `CLM-1042`, and the duplicate-submit check.
     - _Requirements: 12.3, 12.4, 12.5, 12.6, 12.8_
 
+- [x] 12. Audit reason code fix (found in the dev-a run)
+  - [x] 12.1 Use the routing signal as the audit reasonCode
+    - In `backend/processing/decision`, when a claim is routed because the `NO_RISK_SIGNALS` check failed, set the audit record `reasonCode` to the code of the first risk signal that caused the routing (for example `IDENTIFIER_REUSE`, `DUPLICATE_PHOTO`) instead of the check name `NO_RISK_SIGNALS`. Keep `checksFailed` unchanged. Other failed checks keep their current `reasonCode`. The value must still validate against `contracts/audit-record.schema.json`: check the allowed values, and if the schema restricts `reasonCode` and lacks the signal codes, stop and report instead of changing the contract. The routed-by-reason metric dimension uses the same value if it currently uses the check name.
+    - Add one unit test: an `IDENTIFIER_REUSE` claim produces `reasonCode` `IDENTIFIER_REUSE` in the audit record, and the outcome is still `ROUTED_TO_ADJUSTER`.
+    - Run the decision workspace tests and typecheck. Deploy only the Processing stack to dev-a (`npx cdk deploy ClaimsAgent-dev-a-Processing -c stage=dev-a` from `infra/`, exclusively). Stop and report on deploy failure.
+    - Commit as `fix(T-14): use routing signal as audit reason code` with only the changed files, and push the current branch `a/T-09-15-19-claim-flow` to origin (plain push, no force).
+    - _Requirements: 11.2, 9.1_
+
 - [ ] 11. Docs and PR notes (deferred by the user)
   - [ ]* 11.1 READMEs and ticket status
     - Update `backend/api/README.md`, `backend/processing/README.md` and `scripts/README.md` (usage, "Implemented by" status, the claim-frequency note and `--cleanup`). Update the status of tickets T-09, T-10 and T-15.
@@ -207,8 +215,9 @@ T-08 branch `origin/b/T-08-api-skeleton` is already merged into this branch and 
     { "id": 9, "tasks": ["10.1"] },
     { "id": 10, "tasks": ["10.2"] },
     { "id": 11, "tasks": ["10.3"] },
-    { "id": 12, "tasks": ["11.1"] },
-    { "id": 13, "tasks": ["11.2"] }
+    { "id": 12, "tasks": ["12.1"] },
+    { "id": 13, "tasks": ["11.1"] },
+    { "id": 14, "tasks": ["11.2"] }
   ]
 }
 ```
