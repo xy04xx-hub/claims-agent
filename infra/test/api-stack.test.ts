@@ -16,6 +16,7 @@ import { CI_PLACEHOLDER_ACCOUNT } from '../lib/stage.js';
 import { loadStageConfig, resolveRemovalPolicy, type StageConfig } from '../lib/stage-config.js';
 import { ApiStack } from '../lib/stacks/api-stack.js';
 import { AuthStack } from '../lib/stacks/auth-stack.js';
+import { FoundationStack } from '../lib/stacks/foundation-stack.js';
 
 const tmpDirs: string[] = [];
 const trackTmp = (dir: string): string => {
@@ -48,8 +49,9 @@ function build(stage: string, opts: { config?: Partial<StageConfig> } = {}): Bui
   const app = new cdk.App({
     outdir: trackTmp(fs.mkdtempSync(path.join(fs.realpathSync('/tmp'), 'cdk-test-'))),
   });
+  const foundation = new FoundationStack(app, 'Foundation', { stage, config, removalPolicy, env });
   const auth = new AuthStack(app, 'Auth', { stage, config, removalPolicy, consoleUrl: CONSOLE_URL, env });
-  const stack = new ApiStack(app, 'Api', { stage, config, removalPolicy, auth, env });
+  const stack = new ApiStack(app, 'Api', { stage, config, removalPolicy, auth, foundation, env });
   return { stack, template: Template.fromStack(stack), config };
 }
 
@@ -99,8 +101,8 @@ describe('jwt authorizer', () => {
     }
   });
 
-  it('has one audience entry in dev-a and demo and two in dev-b', () => {
-    expect(only(devA.template, 'AWS::ApiGatewayV2::Authorizer').Properties.JwtConfiguration.Audience).toHaveLength(1);
+  it('has one audience entry in demo and two in dev-a and dev-b (the verification client)', () => {
+    expect(only(devA.template, 'AWS::ApiGatewayV2::Authorizer').Properties.JwtConfiguration.Audience).toHaveLength(2);
     expect(only(demo.template, 'AWS::ApiGatewayV2::Authorizer').Properties.JwtConfiguration.Audience).toHaveLength(1);
     expect(only(devB.template, 'AWS::ApiGatewayV2::Authorizer').Properties.JwtConfiguration.Audience).toHaveLength(2);
   });
@@ -237,7 +239,22 @@ describe('cors', () => {
 });
 
 describe('functions and roles', () => {
-  it('are two Node.js 22 ARM64 functions with the exact settings and environment', () => {
+  const COMMON_ENV = ['AWS_NODEJS_CONNECTION_REUSE_ENABLED', 'POWERTOOLS_METRICS_NAMESPACE', 'POWERTOOLS_SERVICE_NAME'];
+  const REQUIRED_ENV: Record<FunctionKey, string[]> = {
+    'api-customer': [
+      'CLAIMS_TABLE',
+      'POLICIES_TABLE',
+      'PACKS_TABLE',
+      'EVIDENCE_INDEX_TABLE',
+      'EVIDENCE_BUCKET',
+      'MAX_UPLOAD_BYTES',
+      'MAX_DESCRIPTION_LENGTH',
+      'MAX_EVIDENCE_FILES',
+    ],
+    'api-adjuster': ['CLAIMS_TABLE', 'POLICIES_TABLE', 'PACKS_TABLE', 'EVIDENCE_INDEX_TABLE', 'AUDIT_TABLE'],
+  };
+
+  it('are two Node.js 22 ARM64 functions with the exact settings and environment keys', () => {
     for (const { template } of builds()) {
       const fns = all(template, 'AWS::Lambda::Function');
       expect(fns).toHaveLength(2);
@@ -248,11 +265,13 @@ describe('functions and roles', () => {
         expect(p.Timeout).toBe(10);
         expect(p.MemorySize).toBe(256);
         expect(p.TracingConfig).toEqual({ Mode: 'Active' });
-        expect(Object.keys(p.Environment.Variables).sort()).toEqual([
-          'AWS_NODEJS_CONNECTION_REUSE_ENABLED',
-          'POWERTOOLS_METRICS_NAMESPACE',
-          'POWERTOOLS_SERVICE_NAME',
-        ]);
+        const vars = p.Environment.Variables as Record<string, string>;
+        const key = vars.POWERTOOLS_SERVICE_NAME as FunctionKey;
+        // Superset check: task 4.1 adds JOB_QUEUE_URL to the customer function.
+        for (const name of [...COMMON_ENV, ...REQUIRED_ENV[key]]) expect(Object.keys(vars), `${key} ${name}`).toContain(name);
+        // Only the customer function gets the upload and submit limits and the evidence bucket.
+        if (key === 'api-adjuster') expect(Object.keys(vars)).not.toContain('EVIDENCE_BUCKET');
+        expect(JSON.stringify(vars)).not.toMatch(/token|secret|password/i);
       }
       expect(fns.map((f) => f.Properties.Environment.Variables.POWERTOOLS_SERVICE_NAME).sort()).toEqual([
         'api-adjuster',
@@ -261,31 +280,81 @@ describe('functions and roles', () => {
     }
   });
 
-  it('use two different roles that allow only logs and X-Ray actions', () => {
+  /** IAM statements that belong to the role of the function with this service name. */
+  const statementsFor = (template: Template, key: FunctionKey): Res[] => {
+    const fn = all(template, 'AWS::Lambda::Function').find(
+      (f) => f.Properties.Environment.Variables.POWERTOOLS_SERVICE_NAME === key,
+    )!;
+    const roleId = (fn.Properties.Role as { 'Fn::GetAtt': [string, string] })['Fn::GetAtt'][0];
+    const out: Res[] = [];
+    const role = template.findResources('AWS::IAM::Role')[roleId] as Res;
+    for (const pol of (role.Properties.Policies ?? []) as Res[]) out.push(...(pol.PolicyDocument.Statement as Res[]));
+    for (const pol of all(template, 'AWS::IAM::Policy')) {
+      const roles = JSON.stringify(pol.Properties.Roles);
+      if (roles.includes(`"${roleId}"`)) out.push(...(pol.Properties.PolicyDocument.Statement as Res[]));
+    }
+    return out;
+  };
+  const actionsOf = (s: Res): string[] => ([] as string[]).concat(s.Action as string | string[]);
+
+  it('use two different roles', () => {
     for (const { template } of builds()) {
-      const fns = all(template, 'AWS::Lambda::Function');
-      const roles = fns.map((f) => JSON.stringify(f.Properties.Role));
+      const roles = all(template, 'AWS::Lambda::Function').map((f) => JSON.stringify(f.Properties.Role));
       expect(new Set(roles).size).toBe(2);
-      const statements: Res[] = [];
-      for (const role of all(template, 'AWS::IAM::Role')) {
-        for (const pol of (role.Properties.Policies ?? []) as Res[]) {
-          statements.push(...(pol.PolicyDocument.Statement as Res[]));
+    }
+  });
+
+  it('give both roles no wildcard action, no Bedrock, SSM, Cognito or PassRole, and a wildcard resource only for X-Ray', () => {
+    for (const { template } of builds()) {
+      for (const key of ['api-customer', 'api-adjuster'] as FunctionKey[]) {
+        const statements = statementsFor(template, key);
+        expect(statements.length, key).toBeGreaterThan(0);
+        for (const s of statements) {
+          expect(s.Effect).toBe('Allow');
+          for (const action of actionsOf(s)) {
+            expect(action, key).not.toMatch(/^\*$|:\*$/);
+            expect(action).toMatch(/^(logs|xray|dynamodb|s3|kms|sqs):/);
+          }
+          if (s.Resource === '*') for (const action of actionsOf(s)) expect(action).toMatch(/^xray:/);
+        }
+        const text = JSON.stringify(statements);
+        for (const banned of ['bedrock', 'ssm:', 'cognito-idp', 'iam:PassRole', 'lambda:Invoke', 'kms:Sign']) {
+          expect(text, `${key} ${banned}`).not.toContain(banned);
         }
       }
-      for (const pol of all(template, 'AWS::IAM::Policy')) {
-        statements.push(...(pol.Properties.PolicyDocument.Statement as Res[]));
-      }
-      expect(statements.length).toBeGreaterThan(0);
-      for (const s of statements) {
-        const actions = ([] as string[]).concat(s.Action as string | string[]);
-        for (const action of actions) {
-          expect(action).toMatch(/^(logs|xray):/);
-          expect(action).not.toBe('*');
-        }
-      }
-      const text = JSON.stringify(statements);
-      for (const banned of ['dynamodb', 's3:', 'sqs', 'ssm', 'kms', 'bedrock', 'cognito-idp', 'iam:PassRole']) {
-        expect(text).not.toContain(banned);
+    }
+  });
+
+  it('allows the customer role UpdateItem only with the enqueuedAt attribute condition', () => {
+    for (const { template } of builds()) {
+      const updates = statementsFor(template, 'api-customer').filter((s) => actionsOf(s).includes('dynamodb:UpdateItem'));
+      expect(updates).toHaveLength(1);
+      expect(actionsOf(updates[0]!)).toEqual(['dynamodb:UpdateItem']);
+      expect(updates[0]!.Condition).toEqual({
+        'ForAllValues:StringEquals': { 'dynamodb:Attributes': ['pk', 'sk', 'enqueuedAt'] },
+      });
+      // No delete anywhere, no batch or scan.
+      const text = JSON.stringify(statementsFor(template, 'api-customer'));
+      expect(text).not.toMatch(/dynamodb:(Delete|Scan|Batch)/);
+    }
+  });
+
+  it('gives the adjuster role no sqs action and no s3 action, and UpdateItem only on resolution attributes', () => {
+    for (const { template } of builds()) {
+      const statements = statementsFor(template, 'api-adjuster');
+      for (const s of statements) for (const action of actionsOf(s)) expect(action).not.toMatch(/^(sqs|s3):/);
+      const updates = statements.filter((s) => actionsOf(s).includes('dynamodb:UpdateItem'));
+      expect(updates).toHaveLength(1);
+      expect(updates[0]!.Condition).toEqual({
+        'ForAllValues:StringEquals': { 'dynamodb:Attributes': ['pk', 'sk', 'status', 'resolution', 'gsi2pk', 'gsi2sk'] },
+      });
+    }
+  });
+
+  it('allows sqs only as SendMessage for the customer role', () => {
+    for (const { template } of builds()) {
+      for (const s of statementsFor(template, 'api-customer')) {
+        for (const action of actionsOf(s)) if (action.startsWith('sqs:')) expect(action).toBe('sqs:SendMessage');
       }
     }
   });
@@ -304,6 +373,10 @@ describe('resources and outputs', () => {
       'AWS::IAM::Role',
       'AWS::IAM::Policy', // X-Ray statements added by active tracing; the actions test covers them
       'AWS::Logs::LogGroup',
+      // Task 4.1: job queue, its dead-letter queue and the DLQ depth alarm.
+      'AWS::SQS::Queue',
+      'AWS::SQS::QueuePolicy',
+      'AWS::CloudWatch::Alarm',
     ]);
     for (const { template } of builds()) {
       const types = Object.values(template.toJSON().Resources as Res).map((r) => r.Type as string);
@@ -311,15 +384,15 @@ describe('resources and outputs', () => {
     }
   });
 
-  it('has exactly four outputs and no exports', () => {
+  it('has the four function and API outputs (plus the queue outputs of task 4.1) and no exports', () => {
     for (const { template } of builds()) {
       const outputs = (template.toJSON().Outputs ?? {}) as Res;
-      expect(Object.keys(outputs).sort()).toEqual([
-        'AdjusterFunctionName',
-        'ApiId',
-        'ApiUrl',
-        'CustomerFunctionName',
-      ]);
+      for (const name of ['AdjusterFunctionName', 'ApiId', 'ApiUrl', 'CustomerFunctionName']) {
+        expect(Object.keys(outputs)).toContain(name);
+      }
+      for (const name of Object.keys(outputs)) {
+        expect(['AdjusterFunctionName', 'ApiId', 'ApiUrl', 'CustomerFunctionName', 'JobQueueUrl', 'JobDlqUrl']).toContain(name);
+      }
       for (const o of Object.values(outputs)) expect(o.Export).toBeUndefined();
     }
   });

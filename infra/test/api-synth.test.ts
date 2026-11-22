@@ -10,6 +10,7 @@ import { CI_PLACEHOLDER_ACCOUNT } from '../lib/stage.js';
 import { loadStageConfig, resolveRemovalPolicy } from '../lib/stage-config.js';
 import { ApiStack } from '../lib/stacks/api-stack.js';
 import { AuthStack } from '../lib/stacks/auth-stack.js';
+import { FoundationStack } from '../lib/stacks/foundation-stack.js';
 import { WebStack } from '../lib/stacks/web-stack.js';
 
 const tmpDirs: string[] = [];
@@ -39,9 +40,10 @@ function synthApi(stage: string) {
     removalPolicy: cdk.RemovalPolicy[resolveRemovalPolicy(stage, config)],
     env: { account: CI_PLACEHOLDER_ACCOUNT, region: 'us-east-1' },
   };
+  const foundation = new FoundationStack(app, 'Foundation', props);
   const web = new WebStack(app, 'Web', props);
   const auth = new AuthStack(app, 'Auth', { ...props, consoleUrl: web.consoleUrl });
-  new ApiStack(app, 'Api', { ...props, auth });
+  new ApiStack(app, 'Api', { ...props, auth, foundation });
   applyNag(app);
   const assembly = app.synth();
   const acknowledgments: Acknowledgment[] = app.node.findAll().flatMap((c) =>
@@ -59,7 +61,9 @@ function synthApi(stage: string) {
 }
 
 const EXPECTED: Array<{ path: string; id: string }> = [
+  { path: 'Api/JobDlq', id: 'AwsSolutions-SQS3' },
   { path: 'Api/api-customer', id: 'AwsSolutions-IAM5[Resource::*]' },
+  { path: 'Api/api-customer', id: 'AwsSolutions-IAM5' },
   { path: 'Api/api-customer', id: 'AwsSolutions-L1' },
   { path: 'Api/api-adjuster', id: 'AwsSolutions-IAM5[Resource::*]' },
   { path: 'Api/api-adjuster', id: 'AwsSolutions-L1' },

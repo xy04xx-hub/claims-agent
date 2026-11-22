@@ -1,8 +1,8 @@
 // Owner: A. Fixed identities, identifiers and dates of the synthetic seed. All values are synthetic.
 // T-06 (B) may import TENANT_ID and CUSTOMER_ID so the seeded Cognito user matches the seeded data.
 
-export const TENANT_ID = "demo-insurer";
-export const CUSTOMER_ID = "cust-demo";
+export const TENANT_ID = process.env.SEED_TENANT_ID ?? "demo-insurer";
+export const CUSTOMER_ID = process.env.SEED_CUSTOMER_ID ?? "cust-demo";
 export const POLICY_ID = "POL-001";
 export const HOLDER_NAME = "Alex Demo";
 

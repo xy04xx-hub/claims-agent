@@ -1,6 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "types": ["node"] },
-  "include": ["api-customer", "api-adjuster", "middleware", "test", "*.ts"],
+  "include": ["api-customer", "api-adjuster", "middleware", "shared", "test", "*.ts"],
   "exclude": ["node_modules"]
 }

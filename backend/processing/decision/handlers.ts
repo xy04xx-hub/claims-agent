@@ -20,7 +20,21 @@ function parseEvent(event: unknown): DecideEvent {
   if (!e || typeof e.tenantId !== "string" || !TENANT.test(e.tenantId) || typeof e.claimId !== "string" || !CLAIM_ID.test(e.claimId)) {
     throw new TypeError("decide: tenantId and claimId are required");
   }
-  return { tenantId: e.tenantId, claimId: e.claimId, proposal: e.proposal, jti: typeof e.jti === "string" ? e.jti : undefined };
+  const jti = typeof e.jti === "string" ? e.jti : undefined;
+  if (e.route !== undefined) {
+    if (e.route !== "EVIDENCE_NOT_READY" && e.route !== "AUTOMATIC_CHECK_UNAVAILABLE") {
+      throw new TypeError("decide: unknown route");
+    }
+    return { tenantId: e.tenantId, claimId: e.claimId, route: e.route, jti };
+  }
+  return { tenantId: e.tenantId, claimId: e.claimId, proposal: e.proposal, jti };
+}
+
+/** Fixed text per route mode, so a caller cannot inject free text. */
+function routeDecision(route: NonNullable<DecideEvent["route"]>, claimId: string): Evaluation["decision"] {
+  return route === "AUTOMATIC_CHECK_UNAVAILABLE"
+    ? failSafeDecision(claimId)
+    : routedDecision(claimId, "EVIDENCE_NOT_READY", "Evidence not ready. The claim was routed so a person can review it.");
 }
 
 /** Everything that can fail without a decision: any error becomes a fail-safe route. */
@@ -77,7 +91,9 @@ export function createHandlers(deps: Deps): Handlers {
     if (!claim) return { result: "NOT_FOUND", claimId: event.claimId };
     if (claim.status !== "PROCESSING") return { result: "ALREADY_DECIDED", claimId: event.claimId };
 
-    const evaluation = await decideClaim(deps, claim, event.proposal);
+    const evaluation = event.route
+      ? fallbackEval(claim, routeDecision(event.route, claim.claimId))
+      : await decideClaim(deps, claim, event.proposal);
     const valid = validateDecision(evaluation.decision);
     if (!valid.ok) throw new Error(`decision failed schema validation: ${valid.error}`);
     const decidedAt = deps.now().toISOString();

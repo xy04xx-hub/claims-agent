@@ -17,7 +17,7 @@ export interface HandlerRoute {
   /** File name in contracts/api, not a parsed schema. */
   readonly bodySchema?: BodySchemaFile;
   readonly pathParams: readonly PathParamName[];
-  readonly state: 'NOT_IMPLEMENTED';
+  readonly state: 'NOT_IMPLEMENTED' | 'IMPLEMENTED';
   readonly ticket: 'T-09' | 'T-10' | 'T-24';
 }
 
@@ -27,7 +27,7 @@ export const ROUTES: readonly HandlerRoute[] = [
     function: 'api-customer',
     groups: ['Customer'],
     pathParams: [],
-    state: 'NOT_IMPLEMENTED',
+    state: 'IMPLEMENTED',
     ticket: 'T-09',
   },
   {
@@ -36,7 +36,7 @@ export const ROUTES: readonly HandlerRoute[] = [
     groups: ['Customer'],
     bodySchema: 'evidence-upload.request.schema.json',
     pathParams: [],
-    state: 'NOT_IMPLEMENTED',
+    state: 'IMPLEMENTED',
     ticket: 'T-09',
   },
   {
@@ -45,7 +45,7 @@ export const ROUTES: readonly HandlerRoute[] = [
     groups: ['Customer'],
     bodySchema: 'claim-create.request.schema.json',
     pathParams: [],
-    state: 'NOT_IMPLEMENTED',
+    state: 'IMPLEMENTED',
     ticket: 'T-09',
   },
   {
@@ -53,7 +53,7 @@ export const ROUTES: readonly HandlerRoute[] = [
     function: 'api-customer',
     groups: ['Customer'],
     pathParams: [],
-    state: 'NOT_IMPLEMENTED',
+    state: 'IMPLEMENTED',
     ticket: 'T-09',
   },
   {
@@ -61,7 +61,7 @@ export const ROUTES: readonly HandlerRoute[] = [
     function: 'api-customer',
     groups: ['Customer', 'Adjuster'],
     pathParams: ['claimId'],
-    state: 'NOT_IMPLEMENTED',
+    state: 'IMPLEMENTED',
     ticket: 'T-09',
   },
   {
@@ -77,7 +77,7 @@ export const ROUTES: readonly HandlerRoute[] = [
     function: 'api-adjuster',
     groups: ['Adjuster'],
     pathParams: [],
-    state: 'NOT_IMPLEMENTED',
+    state: 'IMPLEMENTED',
     ticket: 'T-10',
   },
   {
@@ -86,7 +86,7 @@ export const ROUTES: readonly HandlerRoute[] = [
     groups: ['Adjuster'],
     bodySchema: 'resolution.request.schema.json',
     pathParams: ['claimId'],
-    state: 'NOT_IMPLEMENTED',
+    state: 'IMPLEMENTED',
     ticket: 'T-10',
   },
   {

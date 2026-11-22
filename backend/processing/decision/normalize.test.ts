@@ -13,9 +13,16 @@ describe("normalize tolerates missing data", () => {
       { type: 5, value: {} , kind: "WEIRD" },
     ]);
     expect(rec).toEqual({
-      evidenceId: "EVD-1", claimId: "CLM-1", kind: "DEVICE_PHOTO", sha256: "aa", identifier: "356938035643809", exifDate: "2026-11-18",
+      evidenceId: "EVD-1", claimId: "CLM-1", kind: "DEVICE_PHOTO", sha256: "aa", identifier: "356938035643809", exifDate: "2026-11-18", processingStatus: "PENDING",
     });
     expect(rec.phash).toBeUndefined();
+  });
+  it("toEvidenceRecord derives processingStatus from the hash rows", () => {
+    const s = (items: Record<string, unknown>[]) => toEvidenceRecord("E", items).processingStatus;
+    expect(s([{ type: "SHA256", value: "a", processingStatus: "READY" }, { type: "PHASH", value: "b", processingStatus: "READY" }])).toBe("READY");
+    expect(s([{ type: "SHA256", value: "a", processingStatus: "FAILED" }])).toBe("FAILED");
+    expect(s([{ type: "SHA256", value: "a", processingStatus: "READY" }, { type: "PHASH", value: "b", processingStatus: "FAILED" }])).toBe("FAILED");
+    expect(s([{ type: "IDENTIFIER", value: "a", processingStatus: "READY" }])).toBe("PENDING");
   });
   it("toDate accepts dates and rejects the rest", () => {
     expect(toDate("2026-11-18T10:00:00Z")).toBe("2026-11-18");

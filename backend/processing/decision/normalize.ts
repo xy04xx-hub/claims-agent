@@ -37,6 +37,7 @@ export function toClaim(tenantId: string, item: Item | undefined): ClaimRecord |
     evidenceIds: arr(item.evidenceIds).filter((e): e is string => typeof e === "string"),
     status: status as ClaimStatus,
     createdAt: str(item.createdAt) ?? "",
+    ...(str(item.description) !== undefined ? { description: str(item.description) as string } : {}),
   };
 }
 
@@ -100,9 +101,14 @@ export function toPack(category: string, item: Item | undefined): ClaimTypePack 
 /** Folds the index items of one evidence ID (one per type) into a single record. Missing parts stay undefined. */
 export function toEvidenceRecord(evidenceId: string, items: Item[]): EvidenceRecord {
   const rec: EvidenceRecord = { evidenceId };
+  let failed = false;
+  let sha256Ready = false;
   for (const it of items) {
     const type = str(it.type);
     const value = str(it.value);
+    const status = str(it.processingStatus);
+    if ((type === "SHA256" || type === "PHASH") && status === "FAILED") failed = true;
+    if (type === "SHA256" && status === "READY") sha256Ready = true;
     if (type === "SHA256" && value) rec.sha256 = value;
     if (type === "PHASH" && value) rec.phash = value;
     if (type === "IDENTIFIER" && value) rec.identifier = value;
@@ -110,6 +116,11 @@ export function toEvidenceRecord(evidenceId: string, items: Item[]): EvidenceRec
     if (kind && KINDS.includes(kind)) rec.kind = kind as EvidenceKind;
     rec.claimId = rec.claimId ?? str(it.claimId);
     rec.exifDate = rec.exifDate ?? toDate(it.exifDate);
+    rec.s3Key = rec.s3Key ?? str(it.s3Key);
+    rec.contentType = rec.contentType ?? str(it.contentType);
+    rec.sizeBytes = rec.sizeBytes ?? num(it.sizeBytes);
   }
+  // No rows at all (entry missing) leaves the status undefined, which callers treat as not ready.
+  if (items.length > 0) rec.processingStatus = failed ? "FAILED" : sha256Ready ? "READY" : "PENDING";
   return rec;
 }
