@@ -18,7 +18,9 @@ export function buildAppClientUrls(
   consoleUrl: string,
   localOrigins: readonly string[],
 ): AppClientUrls {
-  if (!consoleUrl.startsWith('https://')) {
+  // A value that is entirely one token (for example the result of Fn.join) hides its prefix until deploy.
+  const isWholeToken = Token.isUnresolved(consoleUrl) && consoleUrl.startsWith('${Token[');
+  if (!isWholeToken && !consoleUrl.startsWith('https://')) {
     throw new Error(`Console URL must start with https://, got '${consoleUrl}'`);
   }
   if (!Token.isUnresolved(consoleUrl) && !HTTPS_ORIGIN.test(consoleUrl)) {
