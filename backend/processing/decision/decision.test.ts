@@ -121,6 +121,19 @@ describe("decide", () => {
     expect(res).toMatchObject({ decision: { outcome: "ROUTED_TO_ADJUSTER", riskSignals: [{ code: "IDENTIFIER_REUSE" }] } });
   });
 
+  it("uses the routing signal as the audit reasonCode and keeps checksFailed", async () => {
+    const store = new FakeStore();
+    store.others[`IDENTIFIER:${IMEI}`] = ["CLM-1042"];
+    const { deps, metrics } = makeDeps({ store });
+    const res = await createHandlers(deps).decide(event(), ctx);
+    expect(res).toMatchObject({ decision: { outcome: "ROUTED_TO_ADJUSTER" } });
+    const { decision, audit } = store.commits[0];
+    expect(audit.reasonCode).toBe("IDENTIFIER_REUSE");
+    expect(validateAudit(audit)).toEqual({ ok: true });
+    expect(decision.checksFailed.map((c) => c.code)).toContain("NO_RISK_SIGNALS");
+    expect(metrics.counts[0]).toEqual({ name: "Routed", dims: { reason: "IDENTIFIER_REUSE" } });
+  });
+
   it("routes when no policy version is in force on the loss date", async () => {
     const store = new FakeStore(claim({ lossDate: "2025-01-01" }));
     const { deps } = makeDeps({ store });
