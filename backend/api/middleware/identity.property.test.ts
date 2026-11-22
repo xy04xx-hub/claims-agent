@@ -88,3 +88,135 @@ describe('Property 3: caller identity comes only from the verified claims', () =
     );
   });
 });
+
+// Feature: b-t08-api-stack, Property 4: Identity defects are rejected before the route runs
+// Validates: Requirements 5.2, 5.3, 5.4, 5.5, 5.7, 5.8, 5.11
+describe('Property 4: identity defects are rejected before the route runs', () => {
+  type Defect =
+    | { kind: 'absent'; claims: undefined | null | string | number | unknown[] }
+    | { kind: 'token'; tokenUse: unknown }
+    | { kind: 'sub'; sub: unknown }
+    | { kind: 'tenant'; tenantId: unknown }
+    | { kind: 'groups'; groups: unknown };
+
+  const marker = fc.stringMatching(/^[a-z0-9]{12}$/);
+
+  const defectFor = (m: string): fc.Arbitrary<Defect> =>
+    fc.oneof(
+      fc.constantFrom<Defect>(
+        { kind: 'absent', claims: undefined },
+        { kind: 'absent', claims: null },
+        { kind: 'absent', claims: `str-${m}` },
+        { kind: 'absent', claims: 42 },
+        { kind: 'absent', claims: [m] },
+      ),
+      fc.constantFrom<unknown>(undefined, null, 'id', 'ID', 'Access', '', 7, `use-${m}`).map(
+        (tokenUse): Defect => ({ kind: 'token', tokenUse }),
+      ),
+      fc.constantFrom<unknown>(undefined, null, '', 5, `${m}${'x'.repeat(130)}`).map(
+        (v): Defect => ({ kind: 'sub', sub: v }),
+      ),
+      fc.constantFrom<unknown>(undefined, null, '', 9, `-${m}`, `has space ${m}`, `${m}!`, `${'a'.repeat(41)}${m}`).map(
+        (v): Defect => ({ kind: 'tenant', tenantId: v }),
+      ),
+      fc.constantFrom<unknown>(
+        undefined,
+        null,
+        '',
+        '[]',
+        `[customer ${m}]`,
+        `[Admin${m}]`,
+        '[Customer Adjuster]',
+        ['Customer', 'Adjuster'],
+        [`Other${m}`],
+        [],
+        7,
+      ).map((v): Defect => ({ kind: 'groups', groups: v })),
+    );
+
+  it('answers 401 or 403 with the generic message, runs no handler and does not validate the body', async () => {
+    const scenario = fc.record({
+      route: fc.constantFrom(...ROUTES),
+      pick: fc.nat(),
+      m: marker,
+    });
+
+    await fc.assert(
+      fc.asyncProperty(
+        scenario.chain((s) => defectFor(s.m).map((defect) => ({ ...s, defect }))),
+        async (s) => {
+          const route: HandlerRoute = s.route;
+          const group: Group = route.groups[s.pick % route.groups.length]!;
+          let handlerCalls = 0;
+          const handlers = {
+            [route.routeKey]: async () => {
+              handlerCalls += 1;
+              return { statusCode: 200, body: { ok: true } };
+            },
+          };
+
+          const claims: Record<string, unknown> = {
+            sub: `sub-${s.m}`,
+            tenantId: 'demo-tenant',
+            token_use: 'access',
+            'cognito:groups': `[${group}]`,
+          };
+          let eventClaims: unknown = claims;
+          let expectedStatus: 401 | 403 = 403;
+          let expectedCode: 'UNAUTHORIZED' | 'FORBIDDEN' = 'FORBIDDEN';
+          const d = s.defect;
+          switch (d.kind) {
+            case 'absent':
+              eventClaims = d.claims;
+              expectedStatus = 401;
+              expectedCode = 'UNAUTHORIZED';
+              break;
+            case 'token':
+              claims['token_use'] = d.tokenUse;
+              expectedStatus = 401;
+              expectedCode = 'UNAUTHORIZED';
+              break;
+            case 'sub':
+              claims['sub'] = d.sub;
+              break;
+            case 'tenant':
+              claims['tenantId'] = d.tenantId;
+              break;
+            case 'groups':
+              claims['cognito:groups'] = d.groups;
+              break;
+          }
+          for (const k of Object.keys(claims)) {
+            if (claims[k] === undefined) delete claims[k];
+          }
+
+          // Invalid body and path parameters: any validation would answer 400.
+          const event = makeEvent({
+            routeKey: route.routeKey,
+            ...(eventClaims !== undefined ? { claims: eventClaims } : {}),
+            ...(route.bodySchema !== undefined ? { body: `{"invalid":${s.m}` } : {}),
+            headers: JSON_HEADERS,
+            pathParameters: Object.fromEntries(route.pathParams.map((n) => [n, '!!bad!!'])),
+          });
+
+          const rec = makeRecorder();
+          const res = await handleRequest(event, {
+            service: route.function,
+            log: rec.log,
+            metrics: rec.metrics,
+            now: fixedClock(),
+            handlers,
+          });
+
+          expect(res.statusCode).toBe(expectedStatus);
+          const parsed = JSON.parse(res.body) as { error: string; message: string; fields?: unknown };
+          expect(parsed.error).toBe(expectedCode);
+          expect(parsed.fields).toBeUndefined();
+          expect(res.body).not.toContain(s.m);
+          expect(handlerCalls).toBe(0);
+        },
+      ),
+      RUNS,
+    );
+  });
+});
