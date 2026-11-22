@@ -35,10 +35,11 @@ function build() {
   const foundation = new FoundationStack(app, 'Foundation', props);
   const processing = new ProcessingStack(app, 'Processing', { ...props, foundation });
   const web = new WebStack(app, 'Web', props);
+  const auth = new AuthStack(app, 'Auth', { ...props, consoleUrl: web.consoleUrl });
   const others: Stack[] = [
     foundation,
-    new AuthStack(app, 'Auth', { ...props, consoleUrl: web.consoleUrl }),
-    new ApiStack(app, 'Api', props),
+    auth,
+    new ApiStack(app, 'Api', { ...props, auth }),
     web,
     new OpsStack(app, 'Ops', props),
     new AgentStack(app, 'Agent', props),

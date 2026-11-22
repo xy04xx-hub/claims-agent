@@ -34,6 +34,8 @@ export interface AuthResources {
   readonly issuerUrl: string;
   /** `<prefix>.auth.us-east-1.amazoncognito.com` */
   readonly cognitoDomain: string;
+  /** Defined only when `enableVerificationClient` is true. Never defined in `demo`. */
+  readonly verificationClientId: string | undefined;
 }
 
 // Owner: B (muzair110)
@@ -45,6 +47,7 @@ export class AuthStack extends cdk.Stack implements AuthResources {
   readonly appClientId: string;
   readonly issuerUrl: string;
   readonly cognitoDomain: string;
+  readonly verificationClientId: string | undefined;
 
   constructor(scope: Construct, id: string, props: AuthStackProps) {
     super(scope, id, { ...props, stackName: stackName(props.stage, 'Auth') });
@@ -181,6 +184,7 @@ export class AuthStack extends cdk.Stack implements AuthResources {
     this.appClientId = consoleClient.userPoolClientId;
     this.issuerUrl = `https://cognito-idp.${this.region}.amazonaws.com/${pool.userPoolId}`;
     this.cognitoDomain = `${prefix}.auth.${this.region}.amazoncognito.com`;
+    this.verificationClientId = verificationClient?.userPoolClientId;
 
     // cdk-nag acknowledgments, each on the narrowest construct that carries the finding.
     cdk.Validations.of(pool).acknowledge({

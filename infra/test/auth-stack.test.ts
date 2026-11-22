@@ -287,6 +287,17 @@ describe('verification client', () => {
     expect(v.TokenValidityUnits).toEqual(c.TokenValidityUnits);
   });
 
+  it('exposes verificationClientId as a Ref of the verification client in dev-b, and undefined elsewhere', () => {
+    const logicalId = Object.keys(
+      devB.template.findResources('AWS::Cognito::UserPoolClient'),
+    ).find((id) => id.startsWith('UserPoolVerificationClient'));
+    expect(logicalId).toBeDefined();
+    expect(devB.stack.verificationClientId).toBeDefined();
+    expect(devB.stack.resolve(devB.stack.verificationClientId)).toEqual({ Ref: logicalId });
+    expect(devA.stack.verificationClientId).toBeUndefined();
+    expect(demo.stack.verificationClientId).toBeUndefined();
+  });
+
   it('is refused in demo when the flag is true', () => {
     expect(() => build('demo', { config: { enableVerificationClient: true } })).toThrow(
       /enableVerificationClient.*demo/,

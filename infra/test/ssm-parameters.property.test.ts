@@ -59,7 +59,7 @@ describe('Property 5: parameter names and values', () => {
     expect(files.some((f) => f.endsWith('ssm-parameters.ts'))).toBe(true);
     const offenders = files
       .filter((f) => !f.endsWith('ssm-parameters.ts'))
-      .filter((f) => readFileSync(f, 'utf8').includes('/claims/'));
+      .filter((f) => /\/claims\/(?!\{)/.test(readFileSync(f, 'utf8'))); // API route paths such as /claims/{claimId} are not SSM names
     expect(offenders).toEqual([]);
     expect(readFileSync(join(platformDir, 'ssm-parameters.ts'), 'utf8')).toContain('/claims/');
   });

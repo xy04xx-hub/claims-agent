@@ -104,7 +104,7 @@ After the first Web deploy:
 1. For a long-lived stage (`demo`), copy `ConsoleUrl` (no trailing slash) into `consoleOrigins` in `infra/config/<stage>.json` and redeploy Foundation (`npm run deploy -- <stage>`), so browser uploads pass the evidence bucket CORS rule. `dev-a` and `dev-b` are destroyed after each check and keep the defaults (see "Which hosts are committed").
 2. The Auth stack (T-06) receives `web.consoleUrl` through stack props, so the Cognito callback and logout URLs follow the CloudFront domain with no manual copy.
 
-Cognito CSP: after the first Auth deploy of a long-lived stage (`demo`), read `CognitoDomain` from the Auth outputs and set `cspCognitoOrigins` in that stage file to `["https://cognito-idp.us-east-1.amazonaws.com", "https://<CognitoDomain>"]` (replacing the wildcard `https://*.amazoncognito.com`), then redeploy Web. The API and evidence bucket hosts (`cspApiOrigins`, `cspEvidenceOrigins`) keep their wildcard defaults until the Api stack exists and `demo` is deployed.
+Cognito CSP: after the first Auth deploy of a long-lived stage (`demo`), read `CognitoDomain` from the Auth outputs and set `cspCognitoOrigins` in that stage file to `["https://cognito-idp.us-east-1.amazonaws.com", "https://<CognitoDomain>"]` (replacing the wildcard `https://*.amazoncognito.com`), then redeploy Web. The API and evidence bucket hosts (`cspApiOrigins`, `cspEvidenceOrigins`) keep their wildcard defaults until `demo` is deployed. For `demo`, set `cspApiOrigins` after the first Api deploy (see the Api stack hand-off).
 
 #### Which hosts are committed
 
@@ -178,7 +178,7 @@ The Verification client has no OAuth and allows the password flow (`USER_PASSWOR
 | `CognitoDomain` | `<prefix>.auth.us-east-1.amazoncognito.com` |
 | `VerificationClientId` | Verification client ID (only when `enableVerificationClient` is `true`) |
 
-Outputs have no export names and no `VITE_` prefix. T-21 maps them to its own variables, and T-08 receives the pool and client through stack props.
+Outputs have no export names and no `VITE_` prefix. T-21 maps them to its own variables, and the Api stack (T-08) receives the pool and client through stack props.
 
 ### Seed users
 
@@ -255,3 +255,133 @@ The control call succeeds, so the first failure comes from the attribute permiss
 - MFA and the Plus plan (threat protection) are off. Both are acknowledged in cdk-nag (`AwsSolutions-COG2`, `-COG8`) and are pilot items.
 - PKCE is applied by the client, not enforced by Cognito.
 - Cognito Essentials costs $0.015 per monthly active user, already counted in `docs/cost-estimate.md`.
+
+## Api stack
+
+`ClaimsAgent-<stage>-Api` is the HTTP API in front of the claims backend. It depends on the Auth stack only, through the typed `auth` prop (`AuthResources`). Nothing depends on it yet. In T-08 every route is wired and protected, and every route answers `501 NOT_IMPLEMENTED` after the checks pass. T-09, T-10 and T-24 add the real handlers.
+
+The stack holds:
+
+- one HTTP API with no default route and a `$default` stage with auto-deploy;
+- one JWT authorizer, used by every route;
+- two Lambda functions, `api-customer` and `api-adjuster`, each with its own role (Node.js 22, ARM64, 10 s, 256 MB, no data-service permission);
+- nine routes, each with its own integration and its own `lambda:InvokeFunction` permission, limited to one method and one path;
+- one access log group (14 days retention, deleted with the stack).
+
+The function code is in `backend/api` (see its README). The route table is in `lib/constructs/platform/api-model.ts` (`API_ROUTES`) and is repeated in `backend/api/routes.ts`. A test keeps the two in sync.
+
+### Routes
+
+| Route | Function | Groups | Implemented by |
+|---|---|---|---|
+| `GET /me/policies` | `api-customer` | Customer | T-09 |
+| `POST /evidence/uploads` | `api-customer` | Customer | T-09 |
+| `POST /claims` | `api-customer` | Customer | T-09 |
+| `GET /claims` | `api-customer` | Customer | T-09 |
+| `GET /claims/{claimId}` | `api-customer` | Customer, Adjuster | T-09 |
+| `GET /claims/{claimId}/evidence/{evidenceId}` | `api-customer` | Customer, Adjuster | T-10 |
+| `GET /queue` | `api-adjuster` | Adjuster | T-10 |
+| `POST /claims/{claimId}/resolution` | `api-adjuster` | Adjuster | T-10 |
+| `GET /impact` | `api-adjuster` | Adjuster | T-24 |
+
+### Authentication and middleware
+
+The JWT authorizer checks the signature, the issuer (the user pool `IssuerUrl`), expiry and the audience. The audience is the console client. In `dev-b` it also holds the Verification client, so curl checks with `USER_PASSWORD_AUTH` tokens pass. In `dev-a`, `demo` and `ci` it holds the console client only. The identity source is the `Authorization` header.
+
+API Gateway cannot tell an access token from an ID token, because both carry the audience or client ID in a form it accepts. The Lambda middleware therefore rejects a token whose `token_use` is not `access` with `401 UNAUTHORIZED` ("An access token is required"). No route reads the ID token.
+
+Every request goes through the same middleware, in this order:
+
+1. request ID (from the API Gateway request context);
+2. claims: `token_use` is `access`, `sub`, `tenantId` and exactly one known group (`Customer` or `Adjuster`) in `cognito:groups`. Role and tenant come only from the verified claims, never from the body, a header or the query string;
+3. route lookup (`404 NOT_FOUND` for an unknown route key);
+4. group gate: `403 FORBIDDEN` when the group is not allowed for the route. This runs before any body check;
+5. path parameters (`claimId` matches `CLM-...`, `evidenceId` matches `EVD-...`);
+6. body: at most 16 KiB, `application/json`, validated against the `contracts/api` schema, undeclared properties rejected (so `tenantId`, `role` or `customerId` in a body gives 400);
+7. dispatch: `501 NOT_IMPLEMENTED` until T-09, T-10 or T-24 register a handler. A handler that throws gives `500 INTERNAL_ERROR` with a fixed message.
+
+Errors from the Lambdas use the schema `contracts/api/error.response.schema.json`: `{ "error": "<CODE>", "message": "...", "requestId": "...", "fields": [{ "path", "message" }] }`. `fields` appears for 400 only, holds at most 20 entries and never repeats the submitted value. The response always carries `x-request-id`. Codes: `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `NOT_IMPLEMENTED`, `INTERNAL_ERROR`.
+
+### Throttling, access logs and CORS
+
+- **Throttling:** the `$default` stage allows 20 requests per second with a burst of 40, for all routes. The values are `THROTTLE` in `lib/constructs/platform/api-model.ts`. Change them there and redeploy.
+- **Access log:** one JSON record per request in the `AccessLogs` group, with these eleven fields: `requestId`, `requestTime`, `httpMethod`, `routeKey`, `status`, `responseLength`, `responseLatency`, `integrationLatency`, `integrationStatus`, `errorMessage`, `authorizerError`. There is no source IP, token, claim, header, query string, path or body. The list is `ACCESS_LOG_FIELDS` in `api-model.ts`.
+- **CORS:** allowed origins come from `consoleOrigins` in the stage file (the same list the evidence bucket uses). Methods `GET`, `POST`, `OPTIONS`. Request headers `Authorization` and `Content-Type`. Exposed header `x-request-id`. No credentials. Max age 600 s. API Gateway answers preflight requests itself, and also adds the CORS headers to its own 401 response.
+
+### Outputs
+
+| Output | Value |
+|---|---|
+| `ApiUrl` | `https://<id>.execute-api.us-east-1.amazonaws.com`, no trailing slash |
+| `ApiId` | HTTP API ID |
+| `CustomerFunctionName` | `api-customer` function name |
+| `AdjusterFunctionName` | `api-adjuster` function name |
+
+Outputs have no export names.
+
+### Hand-off after the first deploy
+
+For a long-lived stage (`demo`), after the first Api deploy:
+
+1. Copy the exact host of `ApiUrl` (`https://<id>.execute-api.us-east-1.amazonaws.com`) into `cspApiOrigins` in `infra/config/<stage>.json` and redeploy Web, so the console CSP allows calls to the API.
+2. Copy the exact console host (`ConsoleUrl`, no trailing slash) into `consoleOrigins` and redeploy Foundation and Api, so the evidence bucket and the API CORS rule accept the console origin.
+
+`dev-a` and `dev-b` keep the wildcard defaults and `http://localhost:5173`, and no ephemeral host is committed. A console served from an ephemeral dev CloudFront host needs a local, uncommitted `consoleOrigins` edit and an Api redeploy before the browser can call the dev API. Curl checks do not need it.
+
+### Permissions that T-09 and T-10 add
+
+T-08 gives the two functions only logging, X-Ray and Powertools metrics. The later tickets add (the stack takes the tables, queue and key as typed props then, with no name lookup):
+
+- **T-09, `api-customer`:** `dynamodb:GetItem`, `Query` and `PutItem` on the named tables (and their indexes where queried); `sqs:SendMessage` on the job queue; presigning of uploads, which needs `s3:PutObject` on the evidence key prefix; and the data key actions (`kms:GenerateDataKey`, `kms:Decrypt`) for the encrypted tables, queue and bucket.
+- **T-10, `api-adjuster` (and the evidence read on `api-customer`):** the conditional update of the claim status, the audit `PutItem`, and the presigned read of evidence (`s3:GetObject` on the evidence key prefix, with the data key).
+
+### Verify a deployment
+
+Run these against `dev-b`. Shell variables only. Passwords and tokens stay in your shell and are never committed. The seeded users come from `npm run seed-users -- dev-b`, and the Verification client exists in `dev-b` only.
+
+```bash
+STACK=ClaimsAgent-dev-b
+out() { aws cloudformation describe-stacks --stack-name "$1" --query "Stacks[0].Outputs[?OutputKey=='$2'].OutputValue" --output text; }
+API=$(out $STACK-Api ApiUrl); API_ID=$(out $STACK-Api ApiId); VCID=$(out $STACK-Auth VerificationClientId)
+tok() { aws cognito-idp initiate-auth --client-id "$VCID" --auth-flow USER_PASSWORD_AUTH \
+  --auth-parameters "USERNAME=$1,PASSWORD=$2" --query "AuthenticationResult.$3" --output text; }
+CUST_ACCESS=$(tok "$CUSTOMER1_EMAIL" "$CUSTOMER1_PASSWORD" AccessToken)
+CUST_ID=$(tok "$CUSTOMER1_EMAIL" "$CUSTOMER1_PASSWORD" IdToken)
+ADJ_ACCESS=$(tok "$ADJUSTER1_EMAIL" "$ADJUSTER1_PASSWORD" AccessToken)
+BODY=$(cat contracts/api/claim-create.request.example.json)
+```
+
+1. No token gives 401 from API Gateway:
+   `curl -s -w '\n%{http_code}\n' "$API/me/policies"` prints `{"message":"Unauthorized"}` and 401.
+2. An ID token gives 401 from the middleware:
+   `curl -s -w '\n%{http_code}\n' -H "Authorization: Bearer $CUST_ID" "$API/me/policies"` prints 401 with `UNAUTHORIZED` and "An access token is required".
+3. A customer on an adjuster route gives 403:
+   `curl -s -w '\n%{http_code}\n' -H "Authorization: Bearer $CUST_ACCESS" "$API/queue"` prints 403 with `FORBIDDEN`.
+4. An adjuster on `/impact` reaches the Lambda and gives 501:
+   `curl -s -w '\n%{http_code}\n' -H "Authorization: Bearer $ADJ_ACCESS" "$API/impact"` prints 501 with `NOT_IMPLEMENTED`.
+5. An invalid body gives 400 with the field named:
+   `curl -s -w '\n%{http_code}\n' -H "Authorization: Bearer $CUST_ACCESS" -H 'Content-Type: application/json' -d "$(echo "$BODY" | jq '. + {tenantId:"x"}')" "$API/claims"` prints 400 and `fields` holds `/tenantId`. The unchanged `$BODY` gives 501.
+6. Both `{claimId}` routes reach the Lambda (501, not 404). The first uses the id from the example file, the second a made-up id:
+   `curl -s -w '\n%{http_code}\n' -H "Authorization: Bearer $CUST_ACCESS" "$API/claims/CLM-1042"` and
+   `curl -s -w '\n%{http_code}\n' -H "Authorization: Bearer $CUST_ACCESS" "$API/claims/CLM-1042/evidence/EVD-1"`.
+7. CORS on the 401 response and on preflight, using an allowed origin (`http://localhost:5173`):
+   `curl -si -H 'Origin: http://localhost:5173' "$API/me/policies" | grep -i '^access-control-allow-origin'` prints the origin.
+   `curl -si -X OPTIONS "$API/claims" -H 'Origin: http://localhost:5173' -H 'Access-Control-Request-Method: POST' | grep -i '^access-control'` prints the allow headers.
+   An origin not in `consoleOrigins` gets no `access-control-allow-origin` header.
+8. Access log and permissions:
+   ```bash
+   LOG_ARN=$(aws apigatewayv2 get-stage --api-id "$API_ID" --stage-name '$default' --query 'AccessLogSettings.DestinationArn' --output text)
+   aws logs tail "${LOG_ARN#*log-group:}" --since 10m        # eleven fields, no token, claim or address
+   aws lambda get-policy --function-name "$(out $STACK-Api CustomerFunctionName)" --query Policy --output text | jq '.Statement[].Condition.ArnLike'
+   ```
+
+### Destroy behaviour
+
+All Api resources are deleted with the stack in every stage, including `demo`: the API, the functions, their log groups and the access log group hold no data. CloudFormation deletes the Api stack before the Auth stack, because Api uses the Auth outputs.
+
+### Limits and pilot items
+
+- No WAF in front of the API, and no custom domain or ACM certificate. Both are pilot items. The API is reachable at the default `execute-api` host.
+- Throttling is one stage-wide default. There is no usage plan or per-client quota, because HTTP APIs do not support them. Per-caller limits would need a WAF rate rule or a REST API.
+- The 401 for a missing or invalid token comes from API Gateway, with the body `{"message":"Unauthorized"}`. It does not follow the project error schema, and has no `requestId` in the body. Every error from the Lambdas (including the 401 for an ID token) uses the project schema.
+- Every route returns 501 until T-09, T-10 and T-24 land. The group and body checks already work.

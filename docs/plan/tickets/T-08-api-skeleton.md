@@ -7,7 +7,7 @@
 | Depends on | T-06 |
 | Judging items | SEC1, SEC2, SEC5, OE2 |
 | Estimate | 3 h |
-| Status | Todo |
+| Status | In review |
 | Branch | `b/T-08-api-skeleton` |
 
 ## Why

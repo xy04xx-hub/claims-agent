@@ -99,7 +99,7 @@ Status values: `Todo`, `In progress`, `In review`, `Done`, `Blocked`.
 | T-05 | Foundation stack: KMS, DynamoDB, S3 evidence, SSM | B | M1 | T-02, T-04 | 3 | Todo |
 | T-06 | Auth stack: Cognito, groups, tenant claim in access token | B | M1 | T-05 | 3 | Todo |
 | T-07 | Web stack: CloudFront, OAC, private bucket | B | M1 | T-04 | 2 | Todo |
-| T-08 | API stack: HTTP API, JWT authorizer, API Lambdas, validation | B | M1 | T-06 | 3 | Todo |
+| T-08 | API stack: HTTP API, JWT authorizer, API Lambdas, validation | B | M1 | T-06 | 3 | In review |
 | T-09 | Evidence upload, claim submit, SQS + DLQ, status routes | B | M1 | T-08 | 4 | Todo |
 | T-10 | Adjuster API: queue, evidence links, resolution | B | M2 | T-09 | 3 | Todo |
 | T-11 | Domain package: packs, coverage and decision rules, tests | A | M1 | T-02 | 4 | Todo |
