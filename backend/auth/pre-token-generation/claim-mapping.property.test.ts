@@ -1,7 +1,7 @@
 // Owner: B (muzair110)
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { addTenantClaim, type PreTokenEventV2 } from './claim-mapping.js';
+import { addTenantClaim, InvalidTenantError, type PreTokenEventV2 } from './claim-mapping.js';
 
 const RUNS = { numRuns: 100 };
 
@@ -176,6 +176,61 @@ describe('Property 1: addTenantClaim sets the tenant claim from the user attribu
         expect(accessClaims(result).tenantId).toBe(
           event.request.userAttributes['custom:tenantId'],
         );
+      }),
+      RUNS,
+    );
+  });
+});
+
+// Valid tenant ids of at least 8 characters, so a defective value built from one can never be a
+// substring of the fixed error message by chance.
+const longTenantArb = validTenantArb.filter((t) => t.length >= 8);
+
+// Each defect is a value for `custom:tenantId`, or the marker `ABSENT` for a missing attribute.
+const ABSENT = Symbol('absent');
+type TenantDefect = typeof ABSENT | number | string;
+
+const defectArb: fc.Arbitrary<TenantDefect> = fc.oneof(
+  fc.constant<TenantDefect>(ABSENT),
+  fc.integer().map<TenantDefect>((n) => n),
+  fc.constant<TenantDefect>(''),
+  // 41 characters (one too many)
+  fc
+    .tuple(fc.constantFrom(...ALNUM), fc.array(fc.constantFrom(...ALNUM, '_', '-'), { minLength: 40, maxLength: 40 }))
+    .map<TenantDefect>(([first, rest]) => first + rest.join('')),
+  // an illegal character inside an otherwise valid id: '#', space, '/' or a non-ASCII character
+  fc
+    .tuple(longTenantArb, fc.constantFrom('#', ' ', '/', 'é', '日', '😀'), fc.nat(7))
+    .map<TenantDefect>(([t, bad, i]) => t.slice(0, i + 1) + bad + t.slice(i + 1)),
+  // leading underscore or hyphen
+  fc
+    .tuple(fc.constantFrom('_', '-'), longTenantArb)
+    .map<TenantDefect>(([lead, t]) => lead + t.slice(0, 39)),
+);
+
+// Feature: b-t06-auth-stack, Property 2
+describe('Property 2: addTenantClaim rejects a missing or invalid tenant without leaking the value', () => {
+  it('throws InvalidTenantError and the message does not contain the value', () => {
+    fc.assert(
+      fc.property(validEventArb, defectArb, (event, defect) => {
+        const attributes: Record<string, unknown> = { ...event.request.userAttributes };
+        delete attributes['custom:tenantId'];
+        if (defect !== ABSENT) attributes['custom:tenantId'] = defect;
+        event.request.userAttributes = attributes;
+        deepFreeze(event);
+
+        let caught: unknown;
+        try {
+          addTenantClaim(event);
+        } catch (e) {
+          caught = e;
+        }
+
+        expect(caught).toBeInstanceOf(InvalidTenantError);
+        const message = (caught as InvalidTenantError).message;
+        if (defect !== ABSENT && defect !== '') {
+          expect(message).not.toContain(String(defect));
+        }
       }),
       RUNS,
     );
