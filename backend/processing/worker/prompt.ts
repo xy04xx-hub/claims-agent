@@ -3,7 +3,7 @@ import type { ContentBlock } from "@aws-sdk/client-bedrock-runtime";
 import { CAUSES } from "@claims-agent/domain";
 import type { ClaimRecord, EvidenceRecord } from "../decision/types.js";
 
-export const PROMPT_VERSION = "worker-v1";
+export const PROMPT_VERSION = "worker-v2";
 
 export const OPEN_TAG = "<untrusted_claimant_text>";
 export const CLOSE_TAG = "</untrusted_claimant_text>";
@@ -19,6 +19,7 @@ Steps:
 2. Read the evidence images and documents. Extract only what you can see: identifiers (IMEI, serial, plate, VIN, report number), the holder name, and dates (incident date, report date, photo date).
 3. Call submit_proposal with the cause, the extracted fields and your evidence assessment. Leave out any value you cannot read. Do not guess.
 
+Confidence (0 to 1) means only how clearly you can read the identifiers and see the claimed item and damage. It is not a judgement of authenticity: code and people handle that. A watermark or caption saying the sample is synthetic or for testing is expected in this system's test data. Do not lower confidence for it. If the identifier is clearly legible and the item is visible, use 0.9 or higher.
 Evidence marked "not shown to the model" was not provided: do not assume its content.
 Be brief. Do not write text outside the tool calls.`;
 

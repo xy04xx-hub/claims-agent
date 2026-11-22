@@ -110,7 +110,7 @@ export class ApiRepo extends DynamoStore {
         TableName: this.tables.claims,
         IndexName: "byQueue",
         KeyConditionExpression: "gsi2pk = :pk AND gsi2sk >= :after",
-        ExpressionAttributeValues: { ":pk": queuePkForShard(tenantId, status, shard), ":after": after },
+        ExpressionAttributeValues: { ":pk": queuePkForShard(tenantId, status, shard), ":after": after || "0" },
         ScanIndexForward: true,
         Limit: limit,
       }),
