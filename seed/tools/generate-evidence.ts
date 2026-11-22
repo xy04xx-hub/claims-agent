@@ -84,7 +84,7 @@ function policeReport(imei: string): Buffer {
   c.text(60, 50, "POLICE REPORT", 6, BLACK);
   c.text(60, 130, "REPORT NO: SYN-2026-00417", 4, BLACK);
   c.text(60, 190, `NAME: ${HOLDER_NAME.toUpperCase()}`, 4, BLACK);
-  c.text(60, 250, `IMEI: ${imei}`, 4, BLACK);
+  c.text(60, 245, `IMEI: ${imei}`, 5, BLACK);
   c.text(60, 310, `INCIDENT DATE: ${SCENARIO_LOSS_DATE}`, 4, BLACK);
   c.text(60, 370, `REPORT DATE: ${SCENARIO_LOSS_DATE}`, 4, BLACK);
   c.text(60, 430, "ITEM: MOBILE PHONE STOLEN", 4, BLACK);
