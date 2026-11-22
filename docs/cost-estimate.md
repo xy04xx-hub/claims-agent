@@ -31,6 +31,10 @@ Caching saves about a fifth of model cost (21%) and shortens the second turn. Th
 
 Cheaper production option: Nova 2 Lite ($0.33 input, $2.75 output per 1M tokens, Price List API 2026-11-21) would cost about $0.0076 per claim for the same tokens without caching, under half of Haiku 4.5 without caching ($0.0196). Image reading quality and caching for this workload are untested, so it is a later evaluation, not part of this estimate.
 
+### Measured token use (2026-11-22, dev-a)
+
+One scenario A claim (phone damage photo, 800x600 PNG) through the same prompt, tools and 2 model turns as the Worker: **4,798 input tokens and 448 output tokens in total**, with no cache read or write. Cost at $1.00 and $5.00 per 1M tokens: 4,798 x $1.00/1M + 448 x $5.00/1M = **$0.0070 per claim**, about 45% of the $0.0154 estimate above. The measured claim sends one small image (the estimate assumed 4,000 image tokens) and the prefix stays below the 4,096-token cache minimum, so the cache checkpoint has no effect today. Only one claim was measured, so treat $0.007 as a lower bound and keep the estimate as the planning figure until shadow-mode data exists. The deployed Worker runs at 512 MB. Wall time per claim was 6.0 to 6.9 s in five warm runs (see `docs/STATUS.md`).
+
 ## 2. Variable cost per claim
 
 | Service | Assumption | Cost per claim |
