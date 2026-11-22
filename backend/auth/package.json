@@ -2,5 +2,11 @@
   "name": "@claims-agent/auth",
   "version": "0.0.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "fast-check": "^4.11.0"
+  }
 }
