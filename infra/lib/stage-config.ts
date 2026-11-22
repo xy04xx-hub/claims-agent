@@ -31,6 +31,8 @@ export interface StageConfig {
   outlierMultiple: number;
   authLocalOrigins: string[];
   enableVerificationClient: boolean;
+  /** Test hook: when true the Worker simulates a Bedrock failure. Never set for `demo`. */
+  injectBedrockFailure?: boolean;
   removalPolicy?: RemovalPolicyName;
 }
 
@@ -201,6 +203,9 @@ export function validateStageConfig(value: unknown, file: string): StageConfig {
   });
   if (typeof value.enableVerificationClient !== 'boolean') {
     throw new ConfigError(file, 'enableVerificationClient', 'must be a boolean');
+  }
+  if (value.injectBedrockFailure !== undefined && typeof value.injectBedrockFailure !== 'boolean') {
+    throw new ConfigError(file, 'injectBedrockFailure', 'must be a boolean when present');
   }
   const rp = value.removalPolicy;
   if (rp !== undefined && !REMOVAL_POLICIES.includes(rp as RemovalPolicyName)) {

@@ -22,6 +22,8 @@ export interface ClaimRecord {
   evidenceIds: string[];
   status: ClaimStatus;
   createdAt: string;
+  /** Claimant text. Untrusted. Read by the Worker only, never logged. */
+  description?: string;
 }
 
 /** What the EvidenceIndex holds for one evidence ID. Every field except `evidenceId` may be missing (T-13 is not built yet). */
@@ -34,6 +36,12 @@ export interface EvidenceRecord {
   identifier?: string;
   /** YYYY-MM-DD */
   exifDate?: string;
+  /** Folded from the hash rows: FAILED if any SHA256 or PHASH row failed, READY if the SHA256 row is ready, else PENDING. */
+  processingStatus?: "READY" | "PENDING" | "FAILED";
+  /** Object key, content type and size as written by the upload and the Evidence Processor. */
+  s3Key?: string;
+  contentType?: string;
+  sizeBytes?: number;
 }
 
 export type IndexType = "SHA256" | "PHASH" | "IDENTIFIER";
@@ -125,7 +133,10 @@ export interface InvokeContext {
 export interface DecideEvent {
   tenantId: string;
   claimId: string;
-  proposal: unknown;
+  /** Required unless `route` is set. */
+  proposal?: unknown;
+  /** Route mode: skip evaluation and route with fixed text. Never produces AUTO_APPROVED. */
+  route?: "EVIDENCE_NOT_READY" | "AUTOMATIC_CHECK_UNAVAILABLE";
   /** Job ticket ID, recorded in the audit log. */
   jti?: string;
 }

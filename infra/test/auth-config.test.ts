@@ -15,7 +15,7 @@ const STAGES = ['default', 'demo', 'dev-a', 'dev-b'] as const;
 const EXPECTED: Record<(typeof STAGES)[number], { origins: string[]; verification: boolean }> = {
   default: { origins: ['http://localhost:5173'], verification: false },
   demo: { origins: [], verification: false },
-  'dev-a': { origins: ['http://localhost:5173'], verification: false },
+  'dev-a': { origins: ['http://localhost:5173'], verification: true },
   'dev-b': { origins: ['http://localhost:5173'], verification: true },
 };
 const read = (stage: string): Record<string, unknown> =>

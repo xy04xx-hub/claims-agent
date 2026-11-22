@@ -1,6 +1,6 @@
 // Owner: B (muzair110)
 // One error shape for every non-success answer (contracts/api/error.response.schema.json).
-import type { ApiResponse } from './types.js';
+import type { ApiResponse, RouteResult } from './types.js';
 
 export interface FieldError {
   path: string;
@@ -12,6 +12,7 @@ export type ErrorCode =
   | 'UNAUTHORIZED'
   | 'FORBIDDEN'
   | 'NOT_FOUND'
+  | 'CONFLICT'
   | 'NOT_IMPLEMENTED'
   | 'INTERNAL_ERROR';
 
@@ -42,4 +43,16 @@ export function errorResponse(
   if (requestId !== undefined) body.requestId = requestId;
   if (fields !== undefined && fields.length > 0) body.fields = fields;
   return jsonResponse(status, body, requestId);
+}
+
+/** Handler-side error result. The middleware adds the request ID header when it serialises it. */
+export function fail(
+  status: number,
+  code: ErrorCode,
+  message: string,
+  fields?: readonly FieldError[],
+): RouteResult {
+  const body: { error: ErrorCode; message: string; fields?: readonly FieldError[] } = { error: code, message };
+  if (fields !== undefined && fields.length > 0) body.fields = fields;
+  return { statusCode: status, body };
 }

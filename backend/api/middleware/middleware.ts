@@ -46,6 +46,8 @@ function statusToOutcome(status: number): Outcome | 'OK' {
       return 'FORBIDDEN';
     case 404:
       return 'NOT_FOUND';
+    case 409:
+      return 'CONFLICT';
     case 501:
       return 'NOT_IMPLEMENTED';
     case 500:

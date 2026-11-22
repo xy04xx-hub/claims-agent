@@ -25,5 +25,5 @@
   "frequencyMaxClaims": 3,
   "outlierMultiple": 2,
   "authLocalOrigins": ["http://localhost:5173"],
-  "enableVerificationClient": false
+  "enableVerificationClient": true
 }

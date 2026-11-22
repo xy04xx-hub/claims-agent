@@ -46,7 +46,7 @@ function stacksOf(app: cdk.App): Map<string, cdk.Stack> {
 }
 
 describe('api wiring', () => {
-  it('Api depends on Auth only, and Auth does not depend on Api', () => {
+  it('Api depends on Auth and Foundation only, and neither depends on Api', () => {
     const app = newApp();
     buildApp(app, makeProps('dev-a'));
     app.synth();
@@ -54,8 +54,10 @@ describe('api wiring', () => {
     const api = stacks.get('Api')!;
     const auth = stacks.get('Auth')!;
     expect(api.dependencies).toContain(auth);
+    expect(api.dependencies).toContain(stacks.get('Foundation')!);
+    expect(stacks.get('Foundation')!.dependencies).not.toContain(api);
     expect(auth.dependencies).not.toContain(api);
-    for (const other of ['Foundation', 'Web', 'Processing', 'Agent', 'Ops']) {
+    for (const other of ['Web', 'Processing', 'Agent', 'Ops']) {
       expect(api.dependencies, other).not.toContain(stacks.get(other)!);
     }
   }, 240_000);
@@ -117,9 +119,10 @@ describe('api source scan', () => {
     ['12-digit number', /(?<!\d)\d{12}(?!\d)/],
     [
       'import of another stack',
-      /from\s+['"][^'"]*(web-stack|foundation-stack|processing-stack|agent-stack|ops-stack)(\.js)?['"]/,
+      /from\s+['"][^'"]*(web-stack|processing-stack|agent-stack|ops-stack)(\.js)?['"]/,
     ],
     ['value import of auth-stack', /^import\s+(?!type\b)[^;]*from\s+['"][^'"]*auth-stack(\.js)?['"]/m],
+    ['value import of foundation-stack', /^import\s+(?!type\b)[^;]*from\s+['"][^'"]*foundation-stack(\.js)?['"]/m],
   ];
   for (const file of files) {
     for (const [label, re] of forbidden) {

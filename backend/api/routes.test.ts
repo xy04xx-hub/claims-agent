@@ -45,8 +45,9 @@ describe('handler route table', () => {
     }
   });
 
-  it('marks every route NOT_IMPLEMENTED with its ticket', () => {
-    for (const r of ROUTES) expect(r.state).toBe('NOT_IMPLEMENTED');
+  it('marks the seven in-scope routes IMPLEMENTED, the other two NOT_IMPLEMENTED, with tickets', () => {
+    const pending = ['GET /impact', 'GET /claims/{claimId}/evidence/{evidenceId}'];
+    for (const r of ROUTES) expect(r.state).toBe(pending.includes(r.routeKey) ? 'NOT_IMPLEMENTED' : 'IMPLEMENTED');
     const tickets = Object.fromEntries(ROUTES.map((r) => [r.routeKey, r.ticket]));
     expect(tickets['GET /impact']).toBe('T-24');
     expect(tickets['GET /queue']).toBe('T-10');

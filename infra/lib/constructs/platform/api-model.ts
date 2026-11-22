@@ -5,7 +5,7 @@ import { GROUP_NAMES, type GroupName } from './auth-model.js';
 export type FunctionKey = 'api-customer' | 'api-adjuster';
 export type HttpMethodName = 'GET' | 'POST';
 export type RouteTicket = 'T-09' | 'T-10' | 'T-24';
-export type RouteState = 'NOT_IMPLEMENTED';
+export type RouteState = 'NOT_IMPLEMENTED' | 'IMPLEMENTED';
 
 export interface ApiRoute {
   /** `${method} ${path}` */
@@ -27,8 +27,9 @@ function route(
   fn: FunctionKey,
   groups: readonly GroupName[],
   ticket: RouteTicket,
+  state: RouteState = ticket === 'T-09' || path === '/queue' || path.endsWith('/resolution') ? 'IMPLEMENTED' : 'NOT_IMPLEMENTED',
 ): ApiRoute {
-  return { routeKey: `${method} ${path}`, method, path, function: fn, groups, state: 'NOT_IMPLEMENTED', ticket };
+  return { routeKey: `${method} ${path}`, method, path, function: fn, groups, state, ticket };
 }
 
 /** The nine routes of architecture.md (section "API"). */

@@ -45,6 +45,7 @@ export type Outcome =
   | 'UNAUTHORIZED'
   | 'FORBIDDEN'
   | 'NOT_FOUND'
+  | 'CONFLICT'
   | 'INTERNAL_ERROR';
 
 export interface LogSink {

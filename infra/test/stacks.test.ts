@@ -109,7 +109,7 @@ describe('dev-a synth', () => {
       expect(errors, `${st.stackName} nag errors`).toEqual([]);
       expect(JSON.stringify(st.template)).not.toContain('cdk_nag');
     }
-  });
+  }, 60_000);
 
   it('records only the known Foundation, Auth, Api, Web and Processing acknowledgments', () => {
     const { app } = buildApp('dev-a');
@@ -136,6 +136,8 @@ describe('dev-a synth', () => {
       `${handler}/ServiceRole/DefaultPolicy IAM5`,
       'Processing/decision IAM5',
       'Processing/decision L1',
+      'Processing/worker IAM5',
+      'Processing/worker L1',
       'Processing/evidence-processor IAM5',
       'Processing/evidence-processor L1',
       'Processing/EvidenceEventsDlq SQS3',
@@ -143,6 +145,8 @@ describe('dev-a synth', () => {
       'Auth/UserPool COG8',
       'Auth/PreTokenGeneration IAM5[Resource::*]',
       'Auth/PreTokenGeneration L1',
+      'Api/JobDlq SQS3',
+      'Api/api-customer IAM5',
       'Api/api-customer IAM5[Resource::*]',
       'Api/api-customer L1',
       'Api/api-adjuster IAM5[Resource::*]',

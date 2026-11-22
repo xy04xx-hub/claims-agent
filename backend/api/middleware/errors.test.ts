@@ -13,6 +13,7 @@ const CASES: ReadonlyArray<[number, ErrorCode]> = [
   [401, 'UNAUTHORIZED'],
   [403, 'FORBIDDEN'],
   [404, 'NOT_FOUND'],
+  [409, 'CONFLICT'],
   [501, 'NOT_IMPLEMENTED'],
   [500, 'INTERNAL_ERROR'],
 ];

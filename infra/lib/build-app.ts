@@ -12,19 +12,20 @@ import { WebStack } from './stacks/web-stack.js';
 /** Creates the seven stacks, applies tags and cdk-nag. Does not synthesize. */
 export function buildApp(app: cdk.App, props: BaseStackProps): void {
   // ---- Foundation: owner B (muzair110) ----
-  new FoundationStack(app, 'Foundation', props);
+  const foundation = new FoundationStack(app, 'Foundation', props);
   // ---- Web: owner B (muzair110) ----
   const web = new WebStack(app, 'Web', props);
   // ---- Auth: owner B (muzair110) ----
   const auth = new AuthStack(app, 'Auth', { ...props, consoleUrl: web.consoleUrl });
   // ---- Api: owner B (muzair110) ----
-  new ApiStack(app, 'Api', { ...props, auth });
+  const api = new ApiStack(app, 'Api', { ...props, auth, foundation });
   // ---- Ops: owner B (muzair110) ----
   new OpsStack(app, 'Ops', props);
   // ---- Processing: owner A ----
   new ProcessingStack(app, 'Processing', {
     ...props,
-    foundation: app.node.findChild('Foundation') as FoundationStack,
+    foundation,
+    api,
   });
   // ---- Agent: owner A ----
   new AgentStack(app, 'Agent', props);

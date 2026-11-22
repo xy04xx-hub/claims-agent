@@ -75,7 +75,7 @@ describe('auth wiring', () => {
     ];
     for (const f of fields) expect(resources[f], f).toBeDefined();
     expectTypeOf<AuthResources['verificationClientId']>().toEqualTypeOf<string | undefined>();
-    expect(resources.verificationClientId).toBeUndefined();
+    expect(resources.verificationClientId).toBeDefined();
     const appB = newApp();
     const propsB = makeProps('dev-b');
     const webB = new WebStack(appB, 'Web', propsB);

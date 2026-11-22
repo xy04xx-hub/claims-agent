@@ -268,8 +268,8 @@ describe('console client', () => {
 describe('verification client', () => {
   const clients = (t: Template): Res[] => all(t, 'AWS::Cognito::UserPoolClient');
 
-  it('exists only in dev-b, with password auth, no OAuth and the same attributes', () => {
-    expect(clients(devA.template)).toHaveLength(1);
+  it('exists in dev-a and dev-b (not demo), with password auth, no OAuth and the same attributes', () => {
+    expect(clients(devA.template)).toHaveLength(2);
     expect(clients(demo.template)).toHaveLength(1);
     expect(clients(devB.template)).toHaveLength(2);
     const v = byLogicalPrefix(devB.template, 'AWS::Cognito::UserPoolClient', 'UserPoolVerificationClient')
@@ -287,14 +287,14 @@ describe('verification client', () => {
     expect(v.TokenValidityUnits).toEqual(c.TokenValidityUnits);
   });
 
-  it('exposes verificationClientId as a Ref of the verification client in dev-b, and undefined elsewhere', () => {
+  it('exposes verificationClientId as a Ref of the verification client in dev-a and dev-b, and undefined in demo', () => {
     const logicalId = Object.keys(
       devB.template.findResources('AWS::Cognito::UserPoolClient'),
     ).find((id) => id.startsWith('UserPoolVerificationClient'));
     expect(logicalId).toBeDefined();
     expect(devB.stack.verificationClientId).toBeDefined();
     expect(devB.stack.resolve(devB.stack.verificationClientId)).toEqual({ Ref: logicalId });
-    expect(devA.stack.verificationClientId).toBeUndefined();
+    expect(devA.stack.verificationClientId).toBeDefined();
     expect(demo.stack.verificationClientId).toBeUndefined();
   });
 
@@ -306,11 +306,11 @@ describe('verification client', () => {
 });
 
 describe('outputs', () => {
-  it('has the four outputs (plus the verification client id in dev-b) and no exports', () => {
+  it('has the four outputs (plus the verification client id in dev-a and dev-b) and no exports', () => {
     const names = (b: Built): string[] =>
       Object.keys((b.template.toJSON() as Res).Outputs ?? {}).sort();
     const base = ['AppClientId', 'CognitoDomain', 'IssuerUrl', 'UserPoolId'];
-    expect(names(devA)).toEqual(base);
+    expect(names(devA)).toEqual([...base, 'VerificationClientId'].sort());
     expect(names(demo)).toEqual(base);
     expect(names(devB)).toEqual([...base, 'VerificationClientId'].sort());
     for (const b of [devA, devB, demo]) {

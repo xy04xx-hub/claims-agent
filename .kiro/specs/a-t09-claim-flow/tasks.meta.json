@@ -1,0 +1,595 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Add `queuePkForShard` and evidence `processingStatus`": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346578771
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346765301
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346916417
+      }
+    ],
+    "1.2 Add Decision Lambda route mode": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346585292
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346947629
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795347054280
+      }
+    ],
+    "2.1 Stage config and seed override": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346590817
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346773585
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346923250
+      }
+    ],
+    "3.1 Widen route state type and add 409 handling": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346596411
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346779574
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346936326
+      }
+    ],
+    "3.2 Shared repository": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346601948
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346954477
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795347067268
+      }
+    ],
+    "3.3 Customer handlers: uploads and policies": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346607481
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795347078946
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795347234640
+      }
+    ],
+    "3.4 Customer handlers: claims": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346613031
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795347086110
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795347242200
+      }
+    ],
+    "3.5 Adjuster handlers": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346618921
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795347093774
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795347249102
+      }
+    ],
+    "3.6 Register handlers in the entry points": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346624548
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795347276786
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795347436639
+      }
+    ],
+    "3.7 ApiStack additive edit": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346630140
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795347284985
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795347444116
+      }
+    ],
+    "3.8 Update T-08 tests": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346635687
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795347470679
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795348191951
+      }
+    ],
+    "4.1 Job queue, DLQ and alarm in ApiStack": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346641195
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795347477480
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795348205111
+      }
+    ],
+    "5.1 Retry and prompt": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346647172
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795347100542
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795347255968
+      }
+    ],
+    "5.2 Evidence loader": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346652667
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795347106897
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795347262903
+      }
+    ],
+    "5.3 Agent tools": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346658180
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795347291167
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795347450750
+      }
+    ],
+    "5.4 Agent loop": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346663697
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795347483578
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795348217643
+      }
+    ],
+    "5.5 Worker handler and entry": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346669256
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795348228460
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795348386822
+      }
+    ],
+    "6.1 Worker function and event source": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346674837
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795348422260
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795350944828
+      }
+    ],
+    "6.2 DLQ to Decision mapping": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346680393
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795350975209
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795351245682
+      }
+    ],
+    "7.1 Claim create tests": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346685940
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795348237016
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795348399312
+      }
+    ],
+    "7.2 Claim get tests": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346691457
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795348242782
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795348405625
+      }
+    ],
+    "7.3 Resolution test": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346697090
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795348248637
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795348411957
+      }
+    ],
+    "7.4 Worker tests": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346702612
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795348429495
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795350951736
+      }
+    ],
+    "7.5 Image-block test": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346708168
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795347297233
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795347457459
+      }
+    ],
+    "7.6 CDK assertion tests": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346713770
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795351263988
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795351414237
+      }
+    ],
+    "7.7 Decision route-mode test": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346719297
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795348435178
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795350958530
+      }
+    ],
+    "8. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346724892
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795351453161
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795352003455
+      }
+    ],
+    "9.1 `scripts/e2e-claim-flow.ts`": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346730643
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795351276237
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795351429319
+      }
+    ],
+    "10.1 Deploy all stacks to dev-a": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346736455
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795352018443
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795352763217
+      }
+    ],
+    "10.2 Seed users and seed data": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346742276
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795352773533
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795352914769
+      }
+    ],
+    "10.3 Run scenarios A and H and show results": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346748197
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795352924561
+      },
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795353212191
+      }
+    ],
+    "2. Config": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795346929305
+      }
+    ],
+    "1. Decision route mode and keys": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795347060401
+      }
+    ],
+    "3. API handlers, ApiStack additive edit, T-08 test updates": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795348198288
+      }
+    ],
+    "4. Queue and DLQ": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795348210860
+      }
+    ],
+    "5. Worker": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795348392984
+      }
+    ],
+    "6. ProcessingStack": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795351252489
+      }
+    ],
+    "7. Minimal tests (Requirement 13 only)": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795351420873
+      }
+    ],
+    "9. E2E script": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795351436448
+      }
+    ],
+    "10. Deploy, seed, run scenarios": [
+      {
+        "executionId": "2fb56418-1147-4897-95ec-1c142b714817",
+        "chatSessionId": "sess_457b9954-f3b2-4f08-8821-e1d81a91906a",
+        "timestamp": 1795353218144
+      }
+    ]
+  }
+}

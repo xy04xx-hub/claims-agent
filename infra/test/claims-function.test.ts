@@ -90,7 +90,7 @@ describe('ClaimsFunction', () => {
     const stacks = [
       foundation,
       auth,
-      new ApiStack(app, 'Api', { ...props, auth }),
+      new ApiStack(app, 'Api', { ...props, auth, foundation }),
       web,
       new OpsStack(app, 'Ops', props),
       new ProcessingStack(app, 'Processing', { ...props, foundation }),

@@ -22,5 +22,6 @@ export function queueShard(claimId: string): number {
   }
   return h % QUEUE_SHARDS;
 }
+export const queuePkForShard = (tenantId: string, status: string, shard: number) => `${tenantId}#${status}#${shard}`;
 export const queuePk = (tenantId: string, status: string, claimId: string) =>
-  `${tenantId}#${status}#${queueShard(claimId)}`;
+  queuePkForShard(tenantId, status, queueShard(claimId));

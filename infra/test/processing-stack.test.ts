@@ -39,7 +39,7 @@ function build() {
   const others: Stack[] = [
     foundation,
     auth,
-    new ApiStack(app, 'Api', { ...props, auth }),
+    new ApiStack(app, 'Api', { ...props, auth, foundation }),
     web,
     new OpsStack(app, 'Ops', props),
     new AgentStack(app, 'Agent', props),
@@ -100,12 +100,14 @@ describe('Processing stack: decision function', () => {
   });
 
   it('only the decision role has UpdateItem on the Claims table, in the whole app', () => {
-    const holders = all.flatMap((stack) =>
+    const updaters = all.flatMap((stack) =>
       statements(stack)
         .filter((s) => actions(s).some((a) => a === 'dynamodb:UpdateItem' || a === 'dynamodb:*' || a === '*'))
-        .map(() => stack.node.id),
+        .map((s) => ({ id: stack.node.id, conditional: (s as { Condition?: unknown }).Condition !== undefined })),
     );
-    expect(holders).toEqual(['Processing']);
+    // The Api roles (T-09) may update only named attributes (enqueuedAt, resolution), enforced by a condition.
+    expect(updaters.filter((u) => !u.conditional).map((u) => u.id)).toEqual(['Processing']);
+    expect(updaters.filter((u) => u.conditional).every((u) => u.id === 'Api')).toBe(true);
     const [update] = statements(processing).filter((s) => actions(s).includes('dynamodb:UpdateItem'));
     expect(text(update.Resource)).toContain('ClaimsTable');
     expect(text(update.Resource)).not.toContain('index');
