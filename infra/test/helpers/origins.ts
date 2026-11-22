@@ -22,3 +22,11 @@ export const validOriginsArb: fc.Arbitrary<string[]> = fc.array(validOriginArb, 
   minLength: 1,
   maxLength: 5,
 });
+
+/** A single valid local origin: `http://localhost` with an optional port from 1 to 65535. */
+export const localOriginArb: fc.Arbitrary<string> = localhostOriginArb;
+/** A valid `authLocalOrigins` list: 0 to 3 origins. */
+export const localOriginsArb: fc.Arbitrary<string[]> = fc.array(localOriginArb, {
+  minLength: 0,
+  maxLength: 3,
+});
