@@ -181,6 +181,28 @@ export class AuthStack extends cdk.Stack implements AuthResources {
     this.issuerUrl = `https://cognito-idp.${this.region}.amazonaws.com/${pool.userPoolId}`;
     this.cognitoDomain = `${prefix}.auth.${this.region}.amazoncognito.com`;
 
+    // cdk-nag acknowledgments, each on the narrowest construct that carries the finding.
+    cdk.Validations.of(pool).acknowledge({
+      id: 'AwsSolutions-COG8',
+      reason:
+        'Essentials plan chosen on purpose: the ticket and docs/cost-estimate.md price Essentials per active user. Plus threat protection is a pilot item.',
+    });
+    cdk.Validations.of(pool).acknowledge({
+      id: 'AwsSolutions-COG2',
+      reason:
+        'MFA is off because the demo users are synthetic and a TOTP step would slow the 4-minute demo. MFA is a pilot item.',
+    });
+    cdk.Validations.of(trigger).acknowledge({
+      id: 'AwsSolutions-IAM5[Resource::*]',
+      reason:
+        'The X-Ray write actions do not support resource-level permissions, so AWS requires a wildcard. The statement comes from the shared ClaimsFunction.',
+    });
+    cdk.Validations.of(trigger).acknowledge({
+      id: 'AwsSolutions-L1',
+      reason:
+        'The project standard is Node.js 22 on ARM64 (repository.md, .nvmrc). Raising the runtime is a project-wide decision for both owners.',
+    });
+
     // 11. Outputs, no export names.
     new cdk.CfnOutput(this, 'UserPoolId', { value: this.userPoolId });
     new cdk.CfnOutput(this, 'AppClientId', { value: this.appClientId });
