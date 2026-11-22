@@ -102,6 +102,8 @@ export const baseConfig: Record<string, unknown> = {
   frequencyWindowDays: 30,
   frequencyMaxClaims: 3,
   outlierMultiple: 2,
+  authLocalOrigins: ["http://localhost:5173"],
+  enableVerificationClient: false,
 };
 
 /** A valid config with the three CSP keys generated. */

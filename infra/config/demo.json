@@ -24,5 +24,7 @@
   "frequencyWindowDays": 30,
   "frequencyMaxClaims": 3,
   "outlierMultiple": 2,
+  "authLocalOrigins": [],
+  "enableVerificationClient": false,
   "removalPolicy": "RETAIN"
 }

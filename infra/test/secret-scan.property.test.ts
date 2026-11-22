@@ -32,6 +32,8 @@ const validConfig = {
   frequencyWindowDays: 30,
   frequencyMaxClaims: 3,
   outlierMultiple: 2,
+  authLocalOrigins: ["http://localhost:5173"],
+  enableVerificationClient: false,
 };
 
 const caseVariant = (s: string) =>

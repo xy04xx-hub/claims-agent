@@ -44,6 +44,8 @@ const base = fc.record({
   frequencyWindowDays: fc.integer({ min: 1, max: 365 }),
   frequencyMaxClaims: fc.integer({ min: 1, max: 1000 }),
   outlierMultiple: fc.double({ min: 0.001, max: 100, noNaN: true, noDefaultInfinity: true }),
+  authLocalOrigins: fc.array(fc.constantFrom("http://localhost:5173", "http://localhost", "http://localhost:3000"), { maxLength: 3 }),
+  enableVerificationClient: fc.boolean(),
 });
 
 // removalPolicy is omitted (not undefined) when absent.
