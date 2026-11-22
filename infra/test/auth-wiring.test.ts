@@ -74,6 +74,13 @@ describe('auth wiring', () => {
       'cognitoDomain',
     ];
     for (const f of fields) expect(resources[f], f).toBeDefined();
+    expectTypeOf<AuthResources['verificationClientId']>().toEqualTypeOf<string | undefined>();
+    expect(resources.verificationClientId).toBeUndefined();
+    const appB = newApp();
+    const propsB = makeProps('dev-b');
+    const webB = new WebStack(appB, 'Web', propsB);
+    const authB = new AuthStack(appB, 'Auth', { ...propsB, consoleUrl: webB.consoleUrl });
+    expect(authB.verificationClientId).toBeDefined();
     // Values are CDK tokens at synth time, so check the literal parts around the token.
     expect(resources.issuerUrl.startsWith('https://cognito-idp.us-east-1.amazonaws.com/')).toBe(true);
     expect(resources.cognitoDomain).toMatch(/^claims-dev-a-[0-9a-f]{8}\.auth\.us-east-1\.amazoncognito\.com$/);
