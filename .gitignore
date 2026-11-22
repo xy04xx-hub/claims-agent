@@ -13,3 +13,4 @@ __pycache__/
 .DS_Store
 frontend/.env.*
 !frontend/.env.example
+docs/DEMO-CREDENTIALS.local.md
