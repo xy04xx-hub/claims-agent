@@ -3,8 +3,8 @@
 // **Validates: Requirements 6.3, 6.4, 6.5, 6.6**
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { cognitoDomainPrefix, RESERVED_DOMAIN_WORDS } from '../lib/constructs/platform/cognito-domain';
-import { STAGE_PATTERN } from '../lib/stage';
+import { cognitoDomainPrefix, RESERVED_DOMAIN_WORDS } from '../lib/constructs/platform/cognito-domain.js';
+import { STAGE_PATTERN } from '../lib/stage.js';
 
 const RUNS = { numRuns: 100 };
 const COGNITO_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
