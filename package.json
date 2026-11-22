@@ -19,7 +19,8 @@
     "deploy": "tsx scripts/run-stack-command.ts deploy",
     "destroy": "tsx scripts/run-stack-command.ts destroy",
     "seed": "tsx scripts/seed-entry.ts",
-    "outputs": "tsx scripts/outputs.ts"
+    "outputs": "tsx scripts/outputs.ts",
+    "seed-users": "tsx scripts/seed-users.ts"
   },
   "devDependencies": {
     "eslint": "^10.15.0",

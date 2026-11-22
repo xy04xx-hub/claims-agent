@@ -42,6 +42,8 @@ const validConfigArb: fc.Arbitrary<Cfg> = fc
     frequencyWindowDays: fc.integer({ min: 1, max: 365 }),
     frequencyMaxClaims: fc.integer({ min: 1, max: 1000 }),
     outlierMultiple: fc.integer({ min: 1, max: 100 }),
+    authLocalOrigins: fc.constant(["http://localhost:5173"]),
+    enableVerificationClient: fc.boolean(),
   })
   .chain((base) =>
     fc

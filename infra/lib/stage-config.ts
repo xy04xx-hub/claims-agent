@@ -29,6 +29,8 @@ export interface StageConfig {
   frequencyWindowDays: number;
   frequencyMaxClaims: number;
   outlierMultiple: number;
+  authLocalOrigins: string[];
+  enableVerificationClient: boolean;
   removalPolicy?: RemovalPolicyName;
 }
 
@@ -68,6 +70,15 @@ export function isValidConsoleOrigin(origin: unknown): boolean {
   if (host.length > 253 || !ORIGIN_HOST.test(host)) return false;
   if (port !== undefined && (Number(port) < 1 || Number(port) > 65535)) return false;
   return scheme === 'https' ? true : host === 'localhost';
+}
+const MAX_AUTH_LOCAL_ORIGINS = 3;
+/** True only for `http://localhost` with an optional port from 1 to 65535. */
+export function isValidLocalOrigin(origin: unknown): boolean {
+  if (typeof origin !== 'string') return false;
+  const m = /^http:\/\/localhost(?::(\d{1,5}))?$/.exec(origin);
+  if (!m) return false;
+  const port = m[1];
+  return port === undefined || (Number(port) >= 1 && Number(port) <= 65535);
 }
 const CSP_KEYS = ['cspApiOrigins', 'cspCognitoOrigins', 'cspEvidenceOrigins'] as const;
 const MAX_CSP_ORIGINS = 4;
@@ -170,6 +181,26 @@ export function validateStageConfig(value: unknown, file: string): StageConfig {
         );
       }
     });
+  }
+  const local = value.authLocalOrigins;
+  if (!Array.isArray(local) || local.length > MAX_AUTH_LOCAL_ORIGINS) {
+    throw new ConfigError(
+      file,
+      'authLocalOrigins',
+      `must be an array of 0 to ${MAX_AUTH_LOCAL_ORIGINS} origins`,
+    );
+  }
+  local.forEach((o, i) => {
+    if (!isValidLocalOrigin(o)) {
+      throw new ConfigError(
+        file,
+        `authLocalOrigins[${i}]`,
+        'must be http://localhost or http://localhost:<port> with a port from 1 to 65535',
+      );
+    }
+  });
+  if (typeof value.enableVerificationClient !== 'boolean') {
+    throw new ConfigError(file, 'enableVerificationClient', 'must be a boolean');
   }
   const rp = value.removalPolicy;
   if (rp !== undefined && !REMOVAL_POLICIES.includes(rp as RemovalPolicyName)) {

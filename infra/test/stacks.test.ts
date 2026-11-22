@@ -92,9 +92,10 @@ describe('dev-a synth', () => {
     expect(assembly.stacks).toHaveLength(7);
     for (const st of assembly.stacks) {
       const types = Object.values((st.template.Resources ?? {}) as Record<string, { Type: string }>).map((r) => r.Type);
-      // Foundation (T-05), Web (T-07) and Processing (T-14) hold resources; the other four hold only metadata.
+      // Foundation (T-05), Auth (T-06), Web (T-07) and Processing (T-14) hold resources; the other three hold only metadata.
       if (
         !st.stackName.endsWith('-Foundation') &&
+        !st.stackName.endsWith('-Auth') &&
         !st.stackName.endsWith('-Web') &&
         !st.stackName.endsWith('-Processing')
       ) {
@@ -109,7 +110,7 @@ describe('dev-a synth', () => {
     }
   });
 
-  it('records only the known Foundation, Web and Processing acknowledgments', () => {
+  it('records only the known Foundation, Auth, Web and Processing acknowledgments', () => {
     const { app } = buildApp('dev-a');
     const found: Array<{ path: string; ids: string[] }> = [];
     for (const c of app.node.findAll()) {
@@ -137,6 +138,10 @@ describe('dev-a synth', () => {
       'Processing/evidence-processor IAM5',
       'Processing/evidence-processor L1',
       'Processing/EvidenceEventsDlq SQS3',
+      'Auth/UserPool COG2',
+      'Auth/UserPool COG8',
+      'Auth/PreTokenGeneration IAM5[Resource::*]',
+      'Auth/PreTokenGeneration L1',
     ].sort();
     expect(flat).toEqual(expected);
   });

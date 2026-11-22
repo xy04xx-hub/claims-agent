@@ -23,6 +23,8 @@ const baseConfig: Cfg = {
   jobTicketTtlSeconds: 60,
   workerTimeoutSeconds: 60,
   sqsMaxReceiveCount: 3,
+  authLocalOrigins: ["http://localhost:5173"],
+  enableVerificationClient: false,
   cspApiOrigins: ['https://*.execute-api.us-east-1.amazonaws.com'],
   cspCognitoOrigins: ['https://cognito-idp.us-east-1.amazonaws.com', 'https://*.amazoncognito.com'],
   cspEvidenceOrigins: ['https://*.s3.us-east-1.amazonaws.com'],
