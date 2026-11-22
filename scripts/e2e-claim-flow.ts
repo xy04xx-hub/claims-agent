@@ -1,4 +1,4 @@
-// Owner: A. `npx tsx scripts/e2e-claim-flow.ts --stage dev-a [--identifier-fallback] [--cleanup]`
+// Owner: A. `npx tsx scripts/e2e-claim-flow.ts --stage dev-a [--scenario A|H] [--identifier-fallback] [--cleanup]`
 // Runs demo scenarios A and H through the deployed API as the seeded customer: sign in, GET /me/policies,
 // evidence upload, POST /claims (twice, same clientRequestId), poll, verdict. Needs AWS credentials (stack outputs,
 // the Claims table read, and with --identifier-fallback or --cleanup the EvidenceIndex and Claims writes).
@@ -32,21 +32,27 @@ const EVIDENCE_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 
 class Fatal extends Error {}
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-interface Args { stage: string; identifierFallback: boolean; cleanup: boolean }
+interface Args { stage: string; identifierFallback: boolean; cleanup: boolean; scenario?: (typeof SCENARIO_IDS)[number] }
+const USAGE = "Usage: --stage dev-a [--scenario A|H] [--identifier-fallback] [--cleanup]";
 
 export function parseArgs(argv: string[]): Args {
   let stage: string | undefined;
   let identifierFallback = false;
   let cleanup = false;
+  let scenario: Args["scenario"];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--stage") stage = argv[++i];
     else if (a === "--identifier-fallback") identifierFallback = true;
     else if (a === "--cleanup") cleanup = true;
-    else throw new Fatal(`Unknown argument ${a}. Usage: --stage dev-a [--identifier-fallback] [--cleanup]`);
+    else if (a === "--scenario") {
+      const v = argv[++i];
+      if (v !== "A" && v !== "H") throw new Fatal(`Invalid --scenario ${String(v)}. ${USAGE}`);
+      scenario = v;
+    } else throw new Fatal(`Unknown argument ${a}. ${USAGE}`);
   }
-  if (!stage) throw new Fatal("Missing --stage. Usage: --stage dev-a [--identifier-fallback] [--cleanup]");
-  return { stage, identifierFallback, cleanup };
+  if (!stage) throw new Fatal(`Missing --stage. ${USAGE}`);
+  return { stage, identifierFallback, cleanup, ...(scenario ? { scenario } : {}) };
 }
 
 const required = (env: NodeJS.ProcessEnv, name: string): string => {
@@ -255,7 +261,7 @@ async function main(): Promise<number> {
   const created = { claims: [] as string[], identifierRows: [] as { pk: string; sk: string }[] };
   let failed = false;
   try {
-    for (const id of SCENARIO_IDS) {
+    for (const id of args.scenario ? [args.scenario] : SCENARIO_IDS) {
       if (!(await runScenario(id, cfg, token, args, doc, created))) failed = true;
     }
   } finally {
