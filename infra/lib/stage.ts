@@ -16,7 +16,12 @@ export const CI_PLACEHOLDER_ACCOUNT = 'ci-placeholder';
 /** Validates the `stage` context value. Throws with the allowed format on any other input. */
 export function parseStage(raw: unknown): string {
   if (typeof raw !== 'string' || !STAGE_PATTERN.test(raw)) {
-    const shown = typeof raw === 'string' ? JSON.stringify(raw) : String(raw);
+    let shown: string;
+    try {
+      shown = typeof raw === 'string' ? JSON.stringify(raw) : String(raw);
+    } catch {
+      shown = typeof raw; // objects whose toString cannot run
+    }
     throw new Error(
       `Context value "stage" is invalid: ${shown}. Use 1 to 32 characters: lowercase letters, digits and hyphens, starting with a letter. Example: -c stage=dev-b`,
     );
