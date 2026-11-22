@@ -220,3 +220,61 @@ describe('Property 4: identity defects are rejected before the route runs', () =
     );
   });
 });
+
+// Feature: b-t08-api-stack, Property 5: The group gate is exact and runs before body validation
+// Validates: Requirements 5.9, 6.11, 7.8, 11.1
+describe('Property 5: the group gate is exact and runs before body validation', () => {
+  const ALL_GROUPS: readonly Group[] = ['Customer', 'Adjuster'];
+
+  it('answers 403 if and only if the group is not allowed, and never 2xx otherwise', async () => {
+    const scenario = fc.record({
+      route: fc.constantFrom(...ROUTES),
+      group: fc.constantFrom(...ALL_GROUPS),
+      validBody: fc.boolean(),
+      badBody: fc.oneof(fc.string({ maxLength: 60 }), fc.constantFrom('', '{', '[]', 'null', '{"x":1}')),
+      validPath: fc.boolean(),
+      arrayGroups: fc.boolean(),
+    });
+
+    await fc.assert(
+      fc.asyncProperty(scenario, async (s) => {
+        const route: HandlerRoute = s.route;
+        const allowed = route.groups.includes(s.group);
+        const validBody = validBodyFor(route);
+        const body = s.validBody ? validBody : s.badBody;
+        const pathParameters = s.validPath
+          ? validPathParametersFor(route)
+          : Object.fromEntries(route.pathParams.map((n) => [n, '!!bad!!']));
+
+        const event = makeEvent({
+          routeKey: route.routeKey,
+          claims: {
+            sub: 'sub-1',
+            tenantId: 'demo-tenant',
+            token_use: 'access',
+            'cognito:groups': s.arrayGroups ? [s.group] : `[${s.group}]`,
+          },
+          ...(route.bodySchema !== undefined && body !== undefined ? { body } : {}),
+          headers: JSON_HEADERS,
+          ...(pathParameters !== undefined ? { pathParameters } : {}),
+        });
+
+        const rec = makeRecorder();
+        const res = await handleRequest(event, {
+          service: route.function,
+          log: rec.log,
+          metrics: rec.metrics,
+          now: fixedClock(),
+        });
+
+        if (allowed) {
+          expect(res.statusCode).not.toBe(403);
+          expect(res.statusCode < 200 || res.statusCode >= 300).toBe(true);
+        } else {
+          expect(res.statusCode).toBe(403);
+        }
+      }),
+      RUNS,
+    );
+  });
+});
