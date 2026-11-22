@@ -236,3 +236,26 @@ describe('Property 2: addTenantClaim rejects a missing or invalid tenant without
     );
   });
 });
+
+// Feature: b-t06-auth-stack, Property 3
+describe('Property 3: addTenantClaim is idempotent', () => {
+  it('mapping an already mapped event returns an equal event', () => {
+    fc.assert(
+      fc.property(validEventArb, (event) => {
+        const once = addTenantClaim(event);
+        const onceSnapshot = structuredClone(once);
+        deepFreeze(once);
+
+        const twice = addTenantClaim(once);
+
+        expect(twice).toEqual(onceSnapshot);
+        expect(accessClaims(twice).tenantId).toBe(
+          event.request.userAttributes['custom:tenantId'],
+        );
+        // The mapped input was not changed by the second call.
+        expect(once).toEqual(onceSnapshot);
+      }),
+      RUNS,
+    );
+  });
+});
