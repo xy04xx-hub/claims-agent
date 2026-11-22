@@ -61,13 +61,30 @@ export class ApiStack extends cdk.Stack implements ApiResources {
 
     // 2. Two functions, one role each. No data-service grants.
     const functions = {} as Record<FunctionKey, lambda.Function>;
+    const claimsFunctions = {} as Record<FunctionKey, ClaimsFunction>;
     for (const key of Object.keys(FUNCTION_ENTRIES) as FunctionKey[]) {
-      functions[key] = new ClaimsFunction(this, key, {
+      const claimsFunction = new ClaimsFunction(this, key, {
         entry: path.join(REPO_ROOT, FUNCTION_ENTRIES[key]),
         timeout: cdk.Duration.seconds(FUNCTION_SETTINGS.timeoutSeconds),
         memorySize: FUNCTION_SETTINGS.memorySize,
         environment: { POWERTOOLS_METRICS_NAMESPACE: METRICS_NAMESPACE },
-      }).function;
+      });
+      claimsFunctions[key] = claimsFunction;
+      functions[key] = claimsFunction.function;
+    }
+
+    // cdk-nag acknowledgments, each on the ClaimsFunction construct that carries the finding.
+    for (const claimsFunction of Object.values(claimsFunctions)) {
+      cdk.Validations.of(claimsFunction).acknowledge({
+        id: 'AwsSolutions-IAM5[Resource::*]',
+        reason:
+          'The X-Ray write actions do not support resource-level permissions, so AWS requires a wildcard. The statement comes from the shared ClaimsFunction.',
+      });
+      cdk.Validations.of(claimsFunction).acknowledge({
+        id: 'AwsSolutions-L1',
+        reason:
+          'The project standard is Node.js 22 on ARM64 (repository.md, .nvmrc). Raising the runtime is a project-wide decision for both owners.',
+      });
     }
 
     // 3. Access log group.
