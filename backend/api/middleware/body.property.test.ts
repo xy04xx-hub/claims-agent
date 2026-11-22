@@ -247,3 +247,81 @@ describe('Property 8: oversized bodies are rejected by size alone', () => {
     });
   });
 });
+
+type ParamName = 'claimId' | 'evidenceId';
+
+// Independent copies of the documented patterns, so the test does not reuse the code under test.
+const EXPECTED_PATTERN: Readonly<Record<ParamName, RegExp>> = {
+  claimId: /^CLM-[A-Za-z0-9-]{1,40}$/,
+  evidenceId: /^EVD-[A-Za-z0-9-]{1,40}$/,
+};
+
+const pathRoutes = ROUTES.filter((r) => r.pathParams.length > 0);
+
+const pathCase = fc
+  .tuple(fc.constantFrom(...pathRoutes), fc.constantFrom<ParamName>('claimId', 'evidenceId'))
+  .filter(([route, name]) => route.pathParams.includes(name))
+  .chain(([route, name]) => {
+    const prefix = name === 'claimId' ? 'CLM-' : 'EVD-';
+    const matching = fc.stringMatching(/^[A-Za-z0-9-]{1,40}$/).map((s) => `${prefix}${s}`);
+    const nearMiss = fc.oneof(
+      fc.stringMatching(/^[A-Za-z0-9-]{41,60}$/).map((s) => `${prefix}${s}`),
+      fc.stringMatching(/^[A-Za-z0-9-]{1,10}$/).map((s) => `${prefix}${s}\n`),
+      fc.stringMatching(/^[A-Za-z0-9-]{1,10}$/).map((s) => `${prefix.toLowerCase()}${s}`),
+      fc.stringMatching(/^[A-Za-z0-9-]{1,10}$/).map((s) => `${prefix}${s}_`),
+      fc.constant(prefix),
+      fc.constant(name === 'claimId' ? 'EVD-1' : 'CLM-1'),
+    );
+    return fc.record({
+      route: fc.constant(route),
+      name: fc.constant(name),
+      value: fc.oneof(fc.string(), fc.string({ unit: 'binary' }), matching, nearMiss),
+    });
+  });
+
+// Feature: b-t08-api-stack, Property 9: Path parameters are accepted exactly when they match
+// Validates: Requirements 6.10
+describe('Property 9: path parameters are accepted exactly when they match', () => {
+  it('accepts a path parameter if and only if it matches its pattern, else 400 naming the parameter', async () => {
+    await fc.assert(
+      fc.asyncProperty(pathCase, async ({ route, name, value }) => {
+        let handlerCalls = 0;
+        const handler: RouteHandler = async () => {
+          handlerCalls += 1;
+          return { statusCode: 200, body: {} };
+        };
+        const rec = makeRecorder();
+        const deps: MiddlewareDeps = {
+          service: route.function,
+          log: rec.log,
+          metrics: rec.metrics,
+          now: fixedClock(),
+          handlers: { [route.routeKey]: handler },
+        };
+        const body = validBodyFor(route);
+        const res: Reply = await handleRequest(
+          makeEvent({
+            routeKey: route.routeKey,
+            claims: validClaims(route.groups[0]!),
+            ...(body !== undefined ? { body } : {}),
+            headers: JSON_HEADERS,
+            pathParameters: { ...validPathParametersFor(route), [name]: value },
+          }),
+          deps,
+        );
+
+        if (EXPECTED_PATTERN[name].test(value)) {
+          expect(res.statusCode).toBe(200);
+          expect(handlerCalls).toBe(1);
+        } else {
+          expect(res.statusCode).toBe(400);
+          const parsed = JSON.parse(res.body) as { error: string; fields?: Array<{ path: string }> };
+          expect(parsed.error).toBe('BAD_REQUEST');
+          expect((parsed.fields ?? []).map((f) => f.path)).toContain(`/${name}`);
+          expect(handlerCalls).toBe(0);
+        }
+      }),
+      RUNS,
+    );
+  });
+});
