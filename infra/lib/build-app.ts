@@ -16,9 +16,9 @@ export function buildApp(app: cdk.App, props: BaseStackProps): void {
   // ---- Web: owner B (muzair110) ----
   const web = new WebStack(app, 'Web', props);
   // ---- Auth: owner B (muzair110) ----
-  new AuthStack(app, 'Auth', { ...props, consoleUrl: web.consoleUrl });
+  const auth = new AuthStack(app, 'Auth', { ...props, consoleUrl: web.consoleUrl });
   // ---- Api: owner B (muzair110) ----
-  new ApiStack(app, 'Api', props);
+  new ApiStack(app, 'Api', { ...props, auth });
   // ---- Ops: owner B (muzair110) ----
   new OpsStack(app, 'Ops', props);
   // ---- Processing: owner A ----
